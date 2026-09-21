@@ -46,6 +46,18 @@
         </div>
 
         <div class="header-actions" @mousedown.stop @touchstart.stop>
+          <!-- 사이드바 열기/닫기 토글 버튼 -->
+          <button 
+            class="header-btn" 
+            :class="{ 'is-active': isSidebarOpen }"
+            @click="toggleSidebar" 
+            :title="isSidebarOpen ? '채팅 이력 접기' : '채팅 이력 펼치기'"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+          </button>
           <!-- 닫기가 아닌 숨기기 버튼 (상태 보존) -->
           <button 
             class="header-btn hide-btn" 
@@ -73,18 +85,25 @@
       </div>
 
       <!-- 본체: 좌측 채팅 이력 목록 + 우측 대화 화면 -->
-      <div class="chat-body">
+      <div class="chat-body" :class="{ 'sidebar-collapsed': !isSidebarOpen }">
         <!-- 좌측: 이전 채팅 이력 사이드바 -->
-        <aside class="chat-sidebar">
+        <aside class="chat-sidebar" :class="{ 'collapsed': !isSidebarOpen }">
           <div class="sidebar-header">
             <span class="sidebar-title">채팅 이력</span>
-            <button class="btn-new-chat" @click="createNewSession">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              새 대화
-            </button>
+            <div class="sidebar-header-actions">
+              <button class="btn-new-chat" @click="createNewSession" title="새 대화 시작">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                새 대화
+              </button>
+              <button class="btn-sidebar-collapse" @click="toggleSidebar" title="채팅 이력 접기">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <ul class="history-list">
@@ -111,6 +130,19 @@
           <!-- 현재 선택된 세션 정보 바 -->
           <div class="session-info-bar">
             <div class="session-topic">
+              <button 
+                class="btn-sidebar-toggle" 
+                @click="toggleSidebar" 
+                :class="{ 'is-collapsed': !isSidebarOpen }"
+                :title="isSidebarOpen ? '채팅 이력 접기' : '채팅 이력 펼치기'"
+                :aria-label="isSidebarOpen ? '채팅 이력 접기' : '채팅 이력 펼치기'"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                  <path v-if="!isSidebarOpen" d="M13 12h5m-2-2l2 2-2 2"></path>
+                </svg>
+              </button>
               <span>{{ currentSession.title }}</span>
               <span class="topic-pill">{{ currentSession.category || '일반 상담' }}</span>
             </div>
@@ -253,6 +285,7 @@ export default {
   data: function() {
     return {
       isOpen: this.initialOpen,
+      isSidebarOpen: true,
       isTyping: false,
       inputMessage: '',
       unreadCount: 1,
@@ -442,6 +475,9 @@ export default {
     hideChat: function() {
       this.isOpen = false;
       this.$emit('hide');
+    },
+    toggleSidebar: function() {
+      this.isSidebarOpen = !this.isSidebarOpen;
     },
     switchSession: function(sessionId) {
       this.currentSessionId = sessionId;
@@ -702,6 +738,11 @@ export default {
   color: #1e293b;
 }
 
+.header-btn.is-active {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
 .header-btn.hide-btn:hover {
   background: #e0e7ff;
   color: #4f46e5;
@@ -722,6 +763,19 @@ export default {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.2s ease,
+              border-color 0.25s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.chat-sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  border-right: 1px solid transparent;
+  pointer-events: none;
 }
 
 .sidebar-header {
@@ -730,6 +784,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid #e2e8f0;
+  min-width: 270px;
 }
 
 .sidebar-title {
@@ -737,6 +792,32 @@ export default {
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-sidebar-collapse {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sidebar-collapse:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
 }
 
 .btn-new-chat {
@@ -751,6 +832,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 4px;
+  transition: all 0.15s ease;
 }
 
 .btn-new-chat:hover {
@@ -762,6 +844,7 @@ export default {
   overflow-y: auto;
   padding: 10px 8px;
   list-style: none;
+  min-width: 270px;
 }
 
 .history-item {
@@ -839,9 +922,35 @@ export default {
 .session-topic {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-weight: 600;
   color: #1e293b;
+}
+
+.btn-sidebar-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sidebar-toggle:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}
+
+.btn-sidebar-toggle.is-collapsed {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
 }
 
 .topic-pill {
