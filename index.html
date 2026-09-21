@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue 2.5.17 플로팅 챗봇 데모</title>
+  <!-- Google Fonts: Inter & Pretendard/Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Vue 2.5.17 (로컬 node_modules 우선, 없을 시 CDN fallback) -->
+  <script src="./node_modules/vue/dist/vue.js"></script>
+  <script>
+    if (typeof Vue === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"><\/script>');
+    }
+  </script>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-border: #c7d2fe;
+      --bg-dark: #0f172a;
+      --bg-surface: #ffffff;
+      --bg-surface-secondary: #f8fafc;
+      --bg-surface-tertiary: #f1f5f9;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-subtle: #94a3b8;
+      --success: #10b981;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* 바탕화면 모의(Mock) 대시보드 레이아웃 */
+    .mock-desktop {
+      padding: 40px 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+      color: #f8fafc;
+    }
+
+    .desktop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .desktop-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .badge-vue {
+      background: rgba(66, 184, 131, 0.15);
+      color: #42b883;
+      border: 1px solid rgba(66, 184, 131, 0.3);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .desktop-hero {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+      margin-bottom: 28px;
+    }
+
+    .desktop-hero h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .desktop-hero p {
+      color: #94a3b8;
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 680px;
+    }
+
+    .desktop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #f1f5f9;
+    }
+
+    .feature-card p {
+      font-size: 13.5px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* 플로팅 런처 버튼 */
+    .floating-launcher-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #ffffff;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 10px 25px -3px rgba(79, 70, 229, 0.5), 0 4px 6px -4px rgba(79, 70, 229, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9998;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+    }
+
+    .floating-launcher-btn:hover {
+      transform: scale(1.08) translateY(-2px);
+      box-shadow: 0 16px 32px -4px rgba(79, 70, 229, 0.6), 0 6px 12px -4px rgba(79, 70, 229, 0.4);
+    }
+
+    .floating-launcher-btn:active {
+      transform: scale(0.96);
+    }
+
+    .floating-launcher-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #ef4444;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      height: 20px;
+      min-width: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #0f172a;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+    }
+
+    .launcher-icon {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .floating-launcher-btn.is-active .launcher-icon {
+      transform: rotate(90deg) scale(0.9);
+    }
+
+    /* 플로팅 챗봇 모달 윈도우 */
+    .chatbot-window {
+      position: fixed;
+      width: 860px;
+      height: 600px;
+      min-width: 480px;
+      min-height: 400px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 32px);
+      background: #ffffff;
+      border-radius: var(--radius-xl);
+      box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.06);
+      display: flex;
+      flex-direction: column;
+      z-index: 9999;
+      overflow: hidden;
+      user-select: none;
+      animation: chatWindowPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes chatWindowPop {
+      0% {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    /* 상단 드래그 헤더 */
+    .chat-header {
+      height: 58px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+
+    .chat-header:active {
+      cursor: grabbing;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .header-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5, #818cf8);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+
+    .header-title-wrap {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .online-indicator {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+
+    .header-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .drag-hint {
+      font-size: 11px;
+      color: #94a3b8;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+    }
+
+    .header-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .header-btn:hover {
+      background: var(--bg-surface-tertiary);
+      color: var(--text-main);
+    }
+
+    .header-btn.hide-btn:hover {
+      background: #e0e7ff;
+      color: var(--primary);
+    }
+
+    .tooltip {
+      position: relative;
+    }
+
+    /* 본체 영역 (사이드바 + 채팅) */
+    .chat-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      background: #ffffff;
+      user-select: text;
+    }
+
+    /* 좌측 채팅 이력 사이드바 */
+    .chat-sidebar {
+      width: 270px;
+      background: var(--bg-surface-secondary);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-new-chat {
+      background: #ffffff;
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-new-chat:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+      list-style: none;
+    }
+
+    .history-item {
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      margin-bottom: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      position: relative;
+    }
+
+    .history-item:hover {
+      background: #f1f5f9;
+    }
+
+    .history-item.active {
+      background: #ffffff;
+      border-color: var(--primary-border);
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.08);
+    }
+
+    .history-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .history-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 170px;
+    }
+
+    .history-item.active .history-title {
+      color: var(--primary);
+    }
+
+    .history-time {
+      font-size: 11px;
+      color: var(--text-subtle);
+    }
+
+    .history-snippet {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+
+    /* 우측 채팅 메인 대화 영역 */
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      position: relative;
+    }
+
+    .session-info-bar {
+      padding: 8px 18px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .session-topic {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .topic-pill {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+    }
+
+    /* 메시지 목록 스크롤 영역 */
+    .message-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      background: #ffffff;
+    }
+
+    .date-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0;
+    }
+
+    .date-divider span {
+      font-size: 11.5px;
+      color: var(--text-subtle);
+      background: #f1f5f9;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .message-row {
+      display: flex;
+      gap: 12px;
+      max-width: 82%;
+    }
+
+    .message-row.bot {
+      align-self: flex-start;
+    }
+
+    .message-row.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      margin-top: 2px;
+    }
+
+    .bot .msg-avatar {
+      background: linear-gradient(135deg, #4f46e5, #818cf8);
+      color: white;
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+    }
+
+    .user .msg-avatar {
+      background: #475569;
+      color: white;
+    }
+
+    .msg-content-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .user .msg-content-wrap {
+      align-items: flex-end;
+    }
+
+    .msg-sender {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      position: relative;
+      word-break: break-word;
+    }
+
+    .bot .msg-bubble {
+      background: #f1f5f9;
+      color: var(--text-main);
+      border-top-left-radius: 4px;
+    }
+
+    .user .msg-bubble {
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      color: #ffffff;
+      border-top-right-radius: 4px;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+    }
+
+    .msg-time {
+      font-size: 10.5px;
+      color: var(--text-subtle);
+      margin-top: 2px;
+    }
+
+    /* 대화 템플릿 카드 */
+    .template-card {
+      margin-top: 10px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .template-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .template-card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 10px;
+    }
+
+    .template-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .template-action-btn {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .template-action-btn:hover {
+      background: #e0e7ff;
+      border-color: var(--primary);
+    }
+
+    /* 추천 질문 퀵 리플라이 칩스 */
+    .quick-suggestions {
+      padding: 8px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      white-space: nowrap;
+      border-top: 1px solid var(--border-subtle);
+      background: #fafafa;
+    }
+
+    .quick-suggestions::-webkit-scrollbar {
+      display: none;
+    }
+
+    .suggestion-chip {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .suggestion-chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    /* 챗봇 타이핑 애니메이션 인디케이터 */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 14px;
+      background: #f1f5f9;
+      border-radius: 16px;
+      border-top-left-radius: 4px;
+      width: fit-content;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background: #94a3b8;
+      border-radius: 50%;
+      animation: typingBlink 1.4s infinite both;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typingBlink {
+      0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+    }
+
+    /* 메시지 입력창 영역 */
+    .chat-input-area {
+      padding: 14px 18px;
+      background: #ffffff;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .input-box-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 4px 6px 4px 14px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-box-wrapper:focus-within {
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .chat-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 14px;
+      color: var(--text-main);
+      font-family: inherit;
+      padding: 8px 0;
+    }
+
+    .chat-input::placeholder {
+      color: var(--text-subtle);
+    }
+
+    .send-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: scale(1.04);
+    }
+
+    .send-btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .input-sub-hint {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-subtle);
+      padding: 0 4px;
+    }
+
+    /* 닫기 대신 상태 유지 숨김 배너 알림 */
+    .hide-toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      box-shadow: var(--shadow-xl);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 10000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      animation: fadeInDown 0.3s ease;
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 스크롤바 커스텀 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <!-- 1. 배경: 바탕화면 모의(Mock) 대시보드 화면 -->
+    <main class="mock-desktop">
+      <header class="desktop-header">
+        <div class="desktop-brand">
+          <div class="brand-logo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <span>CloudService Admin Portal</span>
+        </div>
+        <div>
+          <span class="badge-vue">Vue v{{ vueRuntimeVersion }}</span>
+        </div>
+      </header>
+
+      <section class="desktop-hero">
+        <h1>스마트 AI 챗봇 어시스턴트 플랫폼</h1>
+        <p>
+          본 화면은 Vue 2.5.17에서 동작하는 <strong>플로팅 드래그 챗봇</strong> 데모입니다.
+          우측 하단의 플로팅 버튼을 클릭하여 채팅창을 열고 상단 헤더를 잡아 자유롭게 원하는 위치로 옮겨보세요.
+        </p>
+      </section>
+
+      <div class="desktop-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <h3>1. 플로팅 런처 버튼</h3>
+          <p>화면 우측 하단에 상시 떠 있는 인터랙티브 버튼으로 언제든 대화를 시작할 수 있습니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="5 9 2 12 5 15"></polyline>
+              <polyline points="9 5 12 2 15 5"></polyline>
+              <polyline points="15 19 12 22 9 19"></polyline>
+              <polyline points="19 9 22 12 19 15"></polyline>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <line x1="12" y1="2" x2="12" y2="22"></line>
+            </svg>
+          </div>
+          <h3>2. 드래그 이동 가능 창</h3>
+          <p>채팅창 헤더를 마우스로 잡고 바탕화면 어느 곳이든 자유롭게 드래그하여 배치할 수 있습니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <h3>3. 좌측 이전 대화 이력</h3>
+          <p>좌측 사이드바에서 과거 문의 내역을 목록으로 확인하고 클릭하여 대화를 전환할 수 있습니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <h3>4. 상태 보존 숨기기</h3>
+          <p>닫기 대신 '숨기기' 버튼을 누르면 입력창 텍스트와 대화 스크롤, 선택 세션이 그대로 유지됩니다.</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- 2. 플로팅 런처 버튼 (우측 하단) -->
+    <button 
+      id="floatingChatLauncher"
+      class="floating-launcher-btn" 
+      :class="{ 'is-active': isOpen }" 
+      @click="toggleChat"
+      aria-label="챗봇 열기/닫기"
+    >
+      <div v-if="!isOpen && unreadCount > 0" class="floating-launcher-badge">{{ unreadCount }}</div>
+      
+      <!-- 열려있을 때 닫기 아이콘, 닫혀있을 때 챗봇 아이콘 -->
+      <svg v-if="!isOpen" class="launcher-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        <circle cx="9" cy="10" r="1.2" fill="currentColor"></circle>
+        <circle cx="15" cy="10" r="1.2" fill="currentColor"></circle>
+      </svg>
+      <svg v-else class="launcher-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
+    <!-- 3. 드래그 가능한 플로팅 챗봇 대화창 (v-show로 완벽한 상태 보존) -->
+    <div 
+      v-show="isOpen" 
+      ref="chatWindow"
+      id="chatbotWindow"
+      class="chatbot-window"
+      :style="{ top: windowPosition.top + 'px', left: windowPosition.left + 'px' }"
+    >
+      <!-- 상단 드래그 헤더 바 -->
+      <div 
+        id="chatHeader"
+        class="chat-header" 
+        @mousedown="startDrag"
+        @touchstart="startTouchDrag"
+      >
+        <div class="header-left">
+          <div class="header-avatar">🤖</div>
+          <div class="header-title-wrap">
+            <div class="header-title">
+              <span>루나 AI 챗봇</span>
+              <span class="online-indicator"></span>
+              <span class="drag-hint">드래그하여 이동</span>
+            </div>
+            <div class="header-subtitle">무엇이든 물어보세요 • 실시간 자동응답</div>
+          </div>
+        </div>
+
+        <div class="header-actions" @mousedown.stop @touchstart.stop>
+          <!-- 숨기기 버튼 (상태 보존 핵심 요구사항) -->
+          <button 
+            id="btnHideChat"
+            class="header-btn hide-btn tooltip" 
+            @click="hideChat" 
+            title="대화창 숨기기 (상태 유지)"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <!-- 원래 위치로 리셋 버튼 -->
+          <button 
+            id="btnResetPosition"
+            class="header-btn tooltip" 
+            @click="resetPosition" 
+            title="창 위치 초기화"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 본체: 좌측 채팅 이력 목록 + 우측 대화 영역 -->
+      <div class="chat-body">
+        <!-- 좌측: 이전 채팅 이력 사이드바 -->
+        <aside class="chat-sidebar">
+          <div class="sidebar-header">
+            <span class="sidebar-title">채팅 이력</span>
+            <button id="btnNewChat" class="btn-new-chat" @click="createNewSession">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              새 대화
+            </button>
+          </div>
+
+          <ul class="history-list" id="chatSessionList">
+            <li 
+              v-for="session in sessions" 
+              :key="session.id"
+              :id="'session-' + session.id"
+              class="history-item"
+              :class="{ active: currentSessionId === session.id }"
+              @click="switchSession(session.id)"
+            >
+              <div class="history-item-top">
+                <span class="history-title">{{ session.title }}</span>
+                <span class="history-time">{{ session.updatedAt }}</span>
+              </div>
+              <div class="history-snippet">
+                {{ getLastMessagePreview(session) }}
+              </div>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- 우측: 챗봇 대화 화면 -->
+        <section class="chat-main">
+          <!-- 현재 선택된 세션 정보 바 -->
+          <div class="session-info-bar">
+            <div class="session-topic">
+              <span>{{ currentSession.title }}</span>
+              <span class="topic-pill">{{ currentSession.category || '일반 상담' }}</span>
+            </div>
+            <div>
+              <span>메시지 {{ currentSession.messages.length }}개</span>
+            </div>
+          </div>
+
+          <!-- 메시지 리스트 스크롤 영역 -->
+          <div class="message-container" ref="messageContainer" id="messageContainer">
+            <div class="date-divider">
+              <span>오늘</span>
+            </div>
+
+            <!-- 메시지 반복 렌더링 -->
+            <div 
+              v-for="(msg, index) in currentSession.messages" 
+              :key="index"
+              class="message-row"
+              :class="msg.sender"
+            >
+              <div class="msg-avatar">
+                <span v-if="msg.sender === 'bot'">🤖</span>
+                <span v-else>👤</span>
+              </div>
+
+              <div class="msg-content-wrap">
+                <span class="msg-sender">{{ msg.sender === 'bot' ? '루나 AI' : '나' }}</span>
+                
+                <div class="msg-bubble">
+                  {{ msg.text }}
+
+                  <!-- 템플릿 카드 (봇 메시지에 템플릿 데이터가 있을 때 렌더링) -->
+                  <div v-if="msg.templateCard" class="template-card">
+                    <div class="template-card-title">{{ msg.templateCard.title }}</div>
+                    <div class="template-card-desc">{{ msg.templateCard.description }}</div>
+                    <div class="template-actions">
+                      <button 
+                        v-for="(btn, bIdx) in msg.templateCard.actions" 
+                        :key="bIdx" 
+                        class="template-action-btn"
+                        @click="handleTemplateAction(btn)"
+                      >
+                        {{ btn.label }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <span class="msg-time">{{ msg.time }}</span>
+              </div>
+            </div>
+
+            <!-- 챗봇 응답 대기 중 타이핑 인디케이터 -->
+            <div v-if="isTyping" class="message-row bot">
+              <div class="msg-avatar">🤖</div>
+              <div class="msg-content-wrap">
+                <span class="msg-sender">루나 AI</span>
+                <div class="typing-indicator">
+                  <span class="typing-dot"></span>
+                  <span class="typing-dot"></span>
+                  <span class="typing-dot"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 빠른 추천 질문 (Quick Reply Chips) -->
+          <div class="quick-suggestions" id="quickSuggestions">
+            <button 
+              v-for="(suggestion, sIdx) in quickSuggestions" 
+              :key="sIdx"
+              class="suggestion-chip"
+              @click="sendPresetMessage(suggestion)"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              {{ suggestion }}
+            </button>
+          </div>
+
+          <!-- 메시지 입력 영역 -->
+          <footer class="chat-input-area">
+            <div class="input-box-wrapper">
+              <input 
+                id="chatInput"
+                type="text" 
+                class="chat-input"
+                v-model="inputMessage" 
+                placeholder="메시지를 입력하세요... (Enter를 누르면 전송됩니다)"
+                @keydown.enter="handleEnterKey"
+              />
+              <button 
+                id="btnSendMessage"
+                class="send-btn" 
+                :disabled="!inputMessage.trim() || isTyping"
+                @click="sendMessage"
+                title="메시지 전송"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+            <div class="input-sub-hint">
+              <span>Shift+Enter 줄바꿈 • Enter 전송</span>
+              <span>숨김 시 작성 중인 내용이 보존됩니다</span>
+            </div>
+          </footer>
+        </section>
+      </div>
+    </div>
+
+    <!-- 숨김 안내 토스트 (숨기기 버튼 클릭 시 상태 보존 안내) -->
+    <div v-if="showHideToast" class="hide-toast">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5">
+        <path d="M20 6L9 17l-5-5"></path>
+      </svg>
+      <span>대화창이 숨겨졌습니다. 하단 플로팅 버튼으로 언제든 이전 상태 그대로 다시 열 수 있습니다.</span>
+    </div>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data: function() {
+        return {
+          vueRuntimeVersion: (typeof Vue !== 'undefined' && Vue.version) ? Vue.version : '2.5.17',
+          isOpen: true, // 초기 오픈 상태 (테스트 용이성을 위해 true로 시작)
+          isTyping: false,
+          inputMessage: '',
+          unreadCount: 1,
+          showHideToast: false,
+          hideToastTimer: null,
+          
+          // 드래그 위치 제어
+          windowPosition: {
+            top: 100,
+            left: 280
+          },
+          dragging: false,
+          dragOffset: {
+            x: 0,
+            y: 0
+          },
+
+          // 빠른 추천 질문 목록
+          quickSuggestions: [
+            '기본 사용법 알려줘',
+            'API 연동 템플릿 보기',
+            '대화 이력 추가 방법',
+            '상담원 연결 요청'
+          ],
+
+          // 현재 활성화된 세션 ID
+          currentSessionId: 1,
+
+          // 4. 좌측 대화 이력 및 6. 개발용 챗봇 대화 템플릿 데이터
+          sessions: [
+            {
+              id: 1,
+              title: '신규 프로젝트 시작 가이드',
+              category: '시작하기',
+              updatedAt: '14:20',
+              messages: [
+                {
+                  sender: 'bot',
+                  text: '안녕하세요! Vue 2.5.17 환경에 최적화된 스마트 챗봇 루나입니다. 어떤 작업을 도와드릴까요?',
+                  time: '14:18',
+                  templateCard: {
+                    title: '🚀 빠른 시작 템플릿',
+                    description: '자주 쓰이는 주요 기능 가이드를 확인해보세요.',
+                    actions: [
+                      { label: '컴포넌트 연동 안내', query: '컴포넌트 연동 안내해줘' },
+                      { label: '드래그 설정 팁', query: '드래그 설정 팁 알려줘' }
+                    ]
+                  }
+                },
+                {
+                  sender: 'user',
+                  text: 'Vue 2.5.17에서 컴포넌트로 바로 임포트해서 쓸 수 있나요?',
+                  time: '14:19'
+                },
+                {
+                  sender: 'bot',
+                  text: '네, 가능합니다! Options API 기반으로 작성되어 별도의 외부 의존성 없이 src/FloatingChatbot.vue 파일을 바로 import하여 사용할 수 있도록 구성되어 있습니다.',
+                  time: '14:20'
+                }
+              ]
+            },
+            {
+              id: 2,
+              title: 'REST API 연동 규격 문의',
+              category: '기술 지원',
+              updatedAt: '어제',
+              messages: [
+                {
+                  sender: 'user',
+                  text: '백엔드 메시지 API 연동 규격이 어떻게 되나요?',
+                  time: '어제 17:02'
+                },
+                {
+                  sender: 'bot',
+                  text: '표준 JSON 형식으로 { sender: "user"|"bot", text: string, time: string } 규격을 지원합니다. 필요 시 커스텀 페이로드나 카드 템플릿도 추가할 수 있습니다.',
+                  time: '어제 17:03',
+                  templateCard: {
+                    title: '📡 API 스펙 가이드',
+                    description: 'REST 및 WebSocket 스트리밍 규격 예제를 확인하세요.',
+                    actions: [
+                      { label: 'JSON 규격 다운로드', query: 'JSON 샘플 코드 보여줘' },
+                      { label: '에러 코드 표', query: '에러 코드 목록 보여줘' }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              id: 3,
+              title: '디자인 시스템 테마 커스텀',
+              category: '스타일 가이드',
+              updatedAt: '9월 19일',
+              messages: [
+                {
+                  sender: 'bot',
+                  text: 'CSS Variable(--primary, --bg-surface 등)을 수정하여 원하시는 브랜드 컬러로 쉽게 테마를 변경할 수 있습니다.',
+                  time: '9월 19일 11:30'
+                }
+              ]
+            }
+          ]
+        };
+      },
+
+      computed: {
+        currentSession: function() {
+          var self = this;
+          for (var i = 0; i < this.sessions.length; i++) {
+            if (this.sessions[i].id === self.currentSessionId) {
+              return this.sessions[i];
+            }
+          }
+          return this.sessions[0];
+        }
+      },
+
+      mounted: function() {
+        this.calculateInitialPosition();
+        window.addEventListener('resize', this.onWindowResize);
+        window.addEventListener('mousemove', this.onDrag);
+        window.addEventListener('mouseup', this.stopDrag);
+        window.addEventListener('touchmove', this.onTouchDrag, { passive: false });
+        window.addEventListener('touchend', this.stopDrag);
+
+        this.$nextTick(function() {
+          this.scrollToBottom();
+        });
+      },
+
+      beforeDestroy: function() {
+        window.removeEventListener('resize', this.onWindowResize);
+        window.removeEventListener('mousemove', this.onDrag);
+        window.removeEventListener('mouseup', this.stopDrag);
+        window.removeEventListener('touchmove', this.onTouchDrag);
+        window.removeEventListener('touchend', this.stopDrag);
+      },
+
+      methods: {
+        // 초기 윈도우 위치 계산 (화면 중앙 우측 적절한 위치)
+        calculateInitialPosition: function() {
+          var screenWidth = window.innerWidth;
+          var screenHeight = window.innerHeight;
+          var winWidth = 860;
+          var winHeight = 600;
+
+          var left = Math.max(20, screenWidth - winWidth - 40);
+          var top = Math.max(40, (screenHeight - winHeight) / 2);
+
+          this.windowPosition = {
+            top: top,
+            left: left
+          };
+        },
+
+        resetPosition: function() {
+          this.calculateInitialPosition();
+        },
+
+        onWindowResize: function() {
+          this.clampWindowPosition();
+        },
+
+        // 화면 밖으로 나가지 않도록 경계 제한
+        clampWindowPosition: function() {
+          var winEl = this.$refs.chatWindow;
+          var winWidth = winEl ? winEl.offsetWidth : 860;
+          var winHeight = winEl ? winEl.offsetHeight : 600;
+
+          var maxLeft = window.innerWidth - winWidth - 10;
+          var maxTop = window.innerHeight - winHeight - 10;
+
+          var clampedLeft = Math.min(Math.max(10, this.windowPosition.left), Math.max(10, maxLeft));
+          var clampedTop = Math.min(Math.max(10, this.windowPosition.top), Math.max(10, maxTop));
+
+          this.windowPosition.left = clampedLeft;
+          this.windowPosition.top = clampedTop;
+        },
+
+        // 드래그 시작 (마우스)
+        startDrag: function(e) {
+          if (e.button !== 0) return; // 좌클릭만
+          this.dragging = true;
+          this.dragOffset.x = e.clientX - this.windowPosition.left;
+          this.dragOffset.y = e.clientY - this.windowPosition.top;
+        },
+
+        // 드래그 중
+        onDrag: function(e) {
+          if (!this.dragging) return;
+          var newLeft = e.clientX - this.dragOffset.x;
+          var newTop = e.clientY - this.dragOffset.y;
+
+          // 경계 제한
+          var winEl = this.$refs.chatWindow;
+          var winWidth = winEl ? winEl.offsetWidth : 860;
+          var winHeight = winEl ? winEl.offsetHeight : 600;
+
+          var maxLeft = window.innerWidth - winWidth - 10;
+          var maxTop = window.innerHeight - winHeight - 10;
+
+          this.windowPosition.left = Math.min(Math.max(10, newLeft), maxLeft);
+          this.windowPosition.top = Math.min(Math.max(10, newTop), maxTop);
+        },
+
+        // 드래그 시작 (터치)
+        startTouchDrag: function(e) {
+          if (e.touches.length !== 1) return;
+          this.dragging = true;
+          var touch = e.touches[0];
+          this.dragOffset.x = touch.clientX - this.windowPosition.left;
+          this.dragOffset.y = touch.clientY - this.windowPosition.top;
+        },
+
+        onTouchDrag: function(e) {
+          if (!this.dragging) return;
+          e.preventDefault();
+          var touch = e.touches[0];
+          var newLeft = touch.clientX - this.dragOffset.x;
+          var newTop = touch.clientY - this.dragOffset.y;
+
+          var winEl = this.$refs.chatWindow;
+          var winWidth = winEl ? winEl.offsetWidth : 860;
+          var winHeight = winEl ? winEl.offsetHeight : 600;
+
+          var maxLeft = window.innerWidth - winWidth - 10;
+          var maxTop = window.innerHeight - winHeight - 10;
+
+          this.windowPosition.left = Math.min(Math.max(10, newLeft), maxLeft);
+          this.windowPosition.top = Math.min(Math.max(10, newTop), maxTop);
+        },
+
+        stopDrag: function() {
+          this.dragging = false;
+        },
+
+        // 1. 플로팅 버튼으로 토글
+        toggleChat: function() {
+          this.isOpen = !this.isOpen;
+          if (this.isOpen) {
+            this.unreadCount = 0;
+            var self = this;
+            this.$nextTick(function() {
+              self.scrollToBottom();
+              var inputEl = document.getElementById('chatInput');
+              if (inputEl) inputEl.focus();
+            });
+          }
+        },
+
+        // 5. 숨기기 버튼 (v-show로 닫지 않고 숨김, 상태 보존)
+        hideChat: function() {
+          this.isOpen = false;
+          var self = this;
+          this.showHideToast = true;
+          if (this.hideToastTimer) clearTimeout(this.hideToastTimer);
+          this.hideToastTimer = setTimeout(function() {
+            self.showHideToast = false;
+          }, 3200);
+        },
+
+        // 4. 세션 전환
+        switchSession: function(sessionId) {
+          this.currentSessionId = sessionId;
+          var self = this;
+          this.$nextTick(function() {
+            self.scrollToBottom();
+          });
+        },
+
+        // 새 대화 시작
+        createNewSession: function() {
+          var newId = Date.now();
+          var newSession = {
+            id: newId,
+            title: '새로운 대화 ' + (this.sessions.length + 1),
+            category: '일반 문의',
+            updatedAt: '방금',
+            messages: [
+              {
+                sender: 'bot',
+                text: '새로운 대화가 시작되었습니다. 무엇이든 편하게 말씀해 주세요!',
+                time: this.getCurrentTimeString(),
+                templateCard: {
+                  title: '💡 추천 질문',
+                  description: '다음 옵션 중 선택하시거나 직접 입력하실 수 있습니다.',
+                  actions: [
+                    { label: '시스템 기능 소개', query: '시스템 기능 소개해줘' },
+                    { label: '연동 가이드 문서', query: '연동 가이드 문서 보여줘' }
+                  ]
+                }
+              }
+            ]
+          };
+
+          this.sessions.unshift(newSession);
+          this.currentSessionId = newId;
+          var self = this;
+          this.$nextTick(function() {
+            self.scrollToBottom();
+            var inputEl = document.getElementById('chatInput');
+            if (inputEl) inputEl.focus();
+          });
+        },
+
+        getLastMessagePreview: function(session) {
+          if (!session.messages || session.messages.length === 0) return '메시지 없음';
+          var lastMsg = session.messages[session.messages.length - 1];
+          return lastMsg.text;
+        },
+
+        getCurrentTimeString: function() {
+          var now = new Date();
+          var hours = now.getHours();
+          var minutes = now.getMinutes();
+          var formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+          return hours + ':' + formattedMinutes;
+        },
+
+        scrollToBottom: function() {
+          var container = this.$refs.messageContainer;
+          if (container) {
+            container.scrollTop = container.scrollHeight;
+          }
+        },
+
+        handleEnterKey: function(e) {
+          if (!e.shiftKey) {
+            e.preventDefault();
+            this.sendMessage();
+          }
+        },
+
+        sendPresetMessage: function(presetText) {
+          this.inputMessage = presetText;
+          this.sendMessage();
+        },
+
+        handleTemplateAction: function(action) {
+          this.inputMessage = action.query || action.label;
+          this.sendMessage();
+        },
+
+        // 6. 개발용 챗봇 대화 템플릿 처리 및 자동 응답 시뮬레이션
+        sendMessage: function() {
+          var text = this.inputMessage.trim();
+          if (!text || this.isTyping) return;
+
+          var timeString = this.getCurrentTimeString();
+
+          // 1. 사용자 메시지 등록
+          this.currentSession.messages.push({
+            sender: 'user',
+            text: text,
+            time: timeString
+          });
+
+          this.currentSession.updatedAt = timeString;
+          this.inputMessage = '';
+
+          var self = this;
+          this.$nextTick(function() {
+            self.scrollToBottom();
+          });
+
+          // 2. 챗봇 자동 응답 시뮬레이션 (타이핑 인디케이터 표시 후 응답)
+          this.isTyping = true;
+
+          setTimeout(function() {
+            self.isTyping = false;
+            var botResponse = self.generateMockReply(text);
+            
+            self.currentSession.messages.push({
+              sender: 'bot',
+              text: botResponse.text,
+              time: self.getCurrentTimeString(),
+              templateCard: botResponse.templateCard || null
+            });
+
+            self.$nextTick(function() {
+              self.scrollToBottom();
+            });
+          }, 850);
+        },
+
+        // 개발용 챗봇 목업 응답 템플릿 생성기
+        generateMockReply: function(userQuery) {
+          if (userQuery.indexOf('사용법') > -1 || userQuery.indexOf('기본') > -1) {
+            return {
+              text: '챗봇 기본 사용 가이드입니다. 상단 헤더를 마우스로 잡고 드래그하면 화면 어디든 창을 이동할 수 있습니다. 상단의 [-] 버튼을 누르면 작성 중인 내용과 현재 위치가 그대로 보존된 채 숨겨집니다.',
+              templateCard: {
+                title: '📌 주요 단축키 & 제스처',
+                description: 'Enter: 전송 / Shift+Enter: 줄바꿈 / 헤더 드래그: 창 이동',
+                actions: [
+                  { label: 'API 연동 템플릿 보기', query: 'API 연동 템플릿 보기' },
+                  { label: '이력 추가 방법', query: '대화 이력 추가 방법' }
+                ]
+              }
+            };
+          } else if (userQuery.indexOf('API') > -1 || userQuery.indexOf('연동') > -1) {
+            return {
+              text: '실제 백엔드 LLM 서버와의 통신은 `sendMessage` 메서드 내부에서 axios나 fetch 호출로 간단히 교체할 수 있습니다. 수신된 데이터는 messages 배열에 push하는 구조입니다.',
+              templateCard: {
+                title: '💻 개발자 연동 팁',
+                description: 'WebSocket을 이용한 실시간 스트리밍도 messages 배열의 마지막 항목을 점진적으로 갱신하여 구현 가능합니다.',
+                actions: [
+                  { label: '기본 사용법 알려줘', query: '기본 사용법 알려줘' }
+                ]
+              }
+            };
+          } else if (userQuery.indexOf('상담원') > -1) {
+            return {
+              text: '전문 상담원 연결을 요청하셨습니다. 평일 09:00 ~ 18:00 사이에는 1분 내외로 상담원이 배정됩니다. 현재 대기 인원은 1명입니다.',
+              templateCard: {
+                title: '👨‍💼 상담원 연결 대기',
+                description: '상담 요청 번호: #REQ-2026-0921',
+                actions: [
+                  { label: '요청 취소', query: '상담원 요청 취소할게요' }
+                ]
+              }
+            };
+          } else {
+            return {
+              text: '입력해 주신 "' + userQuery + '"에 대한 안내입니다. 본 화면은 Vue 2.5.17 컴포넌트 템플릿으로 제공되며, 원하시는 비즈니스 로직과 API를 손쉽게 연결할 수 있습니다.',
+              templateCard: {
+                title: '⚡ 추가 옵션',
+                description: '관련된 빠른 액션을 선택하세요.',
+                actions: [
+                  { label: '새 대화 시작', query: '새로운 대화 시작' },
+                  { label: '도움말 보기', query: '기본 사용법 알려줘' }
+                ]
+              }
+            };
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

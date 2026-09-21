@@ -1,0 +1,13 @@
+{
+  "name": "vue-floating-chatbot",
+  "version": "1.0.0",
+  "description": "Draggable Floating Chatbot for Vue 2.5.17",
+  "scripts": {
+    "dev": "python3 -m http.server 3000"
+  },
+  "dependencies": {
+    "vue": "2.5.17"
+  },
+  "keywords": ["vue2", "chatbot", "draggable", "floating"],
+  "license": "MIT"
+}
