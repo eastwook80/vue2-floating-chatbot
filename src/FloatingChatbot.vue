@@ -1,5 +1,5 @@
 <template>
-  <div class="vue-floating-chatbot-root">
+  <div class="vue-floating-chatbot-root" :style="rootStyle">
     <!-- 플로팅 런처 버튼 (우측 하단) -->
     <button 
       class="floating-launcher-btn" 
@@ -435,6 +435,14 @@
         </svg>
       </div>
     </div>
+
+    <!-- 숨김 안내 토스트 (숨기기 버튼 클릭 시 상태 보존 안내) -->
+    <div v-if="showHideToast" class="hide-toast">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5">
+        <path d="M20 6L9 17l-5-5"></path>
+      </svg>
+      <span>대화창이 숨겨졌습니다. 하단 플로팅 버튼으로 언제든 이전 상태 그대로 다시 열 수 있습니다.</span>
+    </div>
   </div>
 </template>
 
@@ -460,6 +468,14 @@ export default {
     initialOpen: {
       type: Boolean,
       default: false
+    },
+    enableMockReply: {
+      type: Boolean,
+      default: true
+    },
+    primaryColor: {
+      type: String,
+      default: ''
     }
   },
   data: function() {
@@ -469,6 +485,8 @@ export default {
       isTyping: false,
       inputMessage: '',
       unreadCount: 1,
+      showHideToast: false,
+      hideToastTimer: null,
       windowPosition: {
         top: 100,
         left: 300
@@ -588,6 +606,14 @@ export default {
     };
   },
   computed: {
+    rootStyle: function() {
+      if (this.primaryColor) {
+        return {
+          '--primary': this.primaryColor
+        };
+      }
+      return {};
+    },
     windowStyle: function() {
       if (this.isMaximized) {
         return {
@@ -715,16 +741,17 @@ export default {
         this.windowSize.height = Math.max(minHeight, Math.min(newHeight, Math.max(minHeight, maxHeight)));
       }
     },
-    onWindowResize: function() {
+    clampWindowPosition: function() {
       if (this.isMaximized) return;
-      var winWidth = this.windowSize.width;
-      var winHeight = this.windowSize.height;
-
-      var maxLeft = window.innerWidth - winWidth - 10;
-      var maxTop = window.innerHeight - winHeight - 10;
-
-      this.windowPosition.left = Math.min(Math.max(10, this.windowPosition.left), Math.max(10, maxLeft));
-      this.windowPosition.top = Math.min(Math.max(10, this.windowPosition.top), Math.max(10, maxTop));
+      var winWidth = this.windowSize ? this.windowSize.width : 860;
+      var winHeight = this.windowSize ? this.windowSize.height : 600;
+      var maxLeft = Math.max(0, window.innerWidth - winWidth - 10);
+      var maxTop = Math.max(0, window.innerHeight - winHeight - 10);
+      this.windowPosition.left = Math.min(Math.max(10, this.windowPosition.left), maxLeft);
+      this.windowPosition.top = Math.min(Math.max(10, this.windowPosition.top), maxTop);
+    },
+    onWindowResize: function() {
+      this.clampWindowPosition();
     },
     startDrag: function(e) {
       if (e.button !== 0 || this.isMaximized) return;
@@ -796,6 +823,12 @@ export default {
     },
     hideChat: function() {
       this.isOpen = false;
+      this.showHideToast = true;
+      if (this.hideToastTimer) clearTimeout(this.hideToastTimer);
+      var self = this;
+      this.hideToastTimer = setTimeout(function() {
+        self.showHideToast = false;
+      }, 3200);
       this.$emit('hide');
     },
     toggleSidebar: function() {
@@ -806,6 +839,7 @@ export default {
         this.cancelEditSessionTitle();
       }
       this.currentSessionId = sessionId;
+      this.$emit('session-change', this.currentSession);
       var self = this;
       this.$nextTick(function() {
         self.scrollToBottom();
@@ -888,6 +922,7 @@ export default {
       };
       this.sessions.unshift(newSession);
       this.currentSessionId = newId;
+      this.$emit('session-change', newSession);
       var self = this;
       this.$nextTick(function() {
         self.scrollToBottom();
@@ -944,23 +979,84 @@ export default {
       this.currentSession.updatedAt = timeString;
       this.inputMessage = '';
 
+      this.$emit('send-message', {
+        text: text,
+        session: this.currentSession
+      });
+
       var self = this;
       this.$nextTick(function() {
         self.scrollToBottom();
       });
 
+      if (!this.enableMockReply) {
+        return;
+      }
+
       this.isTyping = true;
       setTimeout(function() {
         self.isTyping = false;
+        var botResponse = self.generateMockReply(text);
         self.currentSession.messages.push({
           sender: 'bot',
-          text: '입력해 주신 "' + text + '"에 대한 답변입니다. 백엔드 API 연동을 위해 자유롭게 수정하실 수 있습니다.',
-          time: self.getCurrentTimeString()
+          text: botResponse.text,
+          time: self.getCurrentTimeString(),
+          templateCard: botResponse.templateCard || null
         });
+        self.currentSession.updatedAt = self.getCurrentTimeString();
         self.$nextTick(function() {
           self.scrollToBottom();
         });
       }, 800);
+    },
+    generateMockReply: function(userQuery) {
+      if (userQuery.indexOf('사용법') > -1 || userQuery.indexOf('기본') > -1) {
+        return {
+          text: '챗봇 기본 사용 가이드입니다. 상단 헤더를 마우스로 잡고 드래그하면 화면 어디든 창을 이동할 수 있습니다. 상단의 [-] 버튼을 누르면 작성 중인 내용과 현재 위치가 그대로 보존된 채 숨겨집니다.',
+          templateCard: {
+            title: '📌 주요 단축키 & 제스처',
+            description: 'Enter: 전송 / Shift+Enter: 줄바꿈 / 헤더 드래그: 창 이동',
+            actions: [
+              { label: 'API 연동 템플릿 보기', query: 'API 연동 템플릿 보기' },
+              { label: '이력 추가 방법', query: '대화 이력 추가 방법' }
+            ]
+          }
+        };
+      } else if (userQuery.indexOf('API') > -1 || userQuery.indexOf('연동') > -1) {
+        return {
+          text: '실제 백엔드 LLM 서버와의 통신은 `sendMessage` 메서드 내부에서 axios나 fetch 호출로 간단히 교체할 수 있습니다. 수신된 데이터는 messages 배열에 push하는 구조입니다.',
+          templateCard: {
+            title: '💻 개발자 연동 팁',
+            description: 'WebSocket을 이용한 실시간 스트리밍도 messages 배열의 마지막 항목을 점진적으로 갱신하여 구현 가능합니다.',
+            actions: [
+              { label: '기본 사용법 알려줘', query: '기본 사용법 알려줘' }
+            ]
+          }
+        };
+      } else if (userQuery.indexOf('상담원') > -1) {
+        return {
+          text: '전문 상담원 연결을 요청하셨습니다. 평일 09:00 ~ 18:00 사이에는 1분 내외로 상담원이 배정됩니다. 현재 대기 인원은 1명입니다.',
+          templateCard: {
+            title: '👨‍💼 상담원 연결 대기',
+            description: '상담 요청 번호: #REQ-2026-0921',
+            actions: [
+              { label: '요청 취소', query: '상담원 요청 취소할게요' }
+            ]
+          }
+        };
+      } else {
+        return {
+          text: '입력해 주신 "' + userQuery + '"에 대한 안내입니다. 본 화면은 Vue 2.5.17 컴포넌트 템플릿으로 제공되며, 원하시는 비즈니스 로직과 API를 손쉽게 연결할 수 있습니다.',
+          templateCard: {
+            title: '⚡ 추가 옵션',
+            description: '관련된 빠른 액션을 선택하세요.',
+            actions: [
+              { label: '새 대화 시작', query: '새로운 대화 시작' },
+              { label: '도움말 보기', query: '기본 사용법 알려줘' }
+            ]
+          }
+        };
+      }
     },
     triggerFileUpload: function() {
       if (this.$refs.fileInput) {
@@ -997,12 +1093,20 @@ export default {
         }
       });
       this.currentSession.updatedAt = timeString;
+      this.$emit('file-upload', {
+        file: file,
+        session: this.currentSession
+      });
       event.target.value = '';
 
       var self = this;
       this.$nextTick(function() {
         self.scrollToBottom();
       });
+
+      if (!this.enableMockReply) {
+        return;
+      }
 
       this.isTyping = true;
       setTimeout(function() {
@@ -1025,8 +1129,55 @@ export default {
 
 <style scoped>
 .vue-floating-chatbot-root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --primary-border: #c7d2fe;
+  --bg-dark: #0f172a;
+  --bg-surface: #ffffff;
+  --bg-surface-secondary: #f8fafc;
+  --bg-surface-tertiary: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --success: #10b981;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', Helvetica, Arial, sans-serif;
   color: #1e293b;
+}
+
+.vue-floating-chatbot-root,
+.vue-floating-chatbot-root *,
+.vue-floating-chatbot-root *::before,
+.vue-floating-chatbot-root *::after {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+.vue-floating-chatbot-root button,
+.vue-floating-chatbot-root input {
+  font-family: inherit;
+}
+
+/* 컴포넌트 내부 스크롤바 커스텀 */
+.vue-floating-chatbot-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.vue-floating-chatbot-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.vue-floating-chatbot-root ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.vue-floating-chatbot-root ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* 플로팅 런처 버튼 */
@@ -1087,7 +1238,19 @@ export default {
   z-index: 9999;
   overflow: hidden;
   user-select: none;
+  animation: chatWindowPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   transition: border-radius 0.2s ease, box-shadow 0.2s ease;
+}
+
+@keyframes chatWindowPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .chatbot-window.is-maximized {
@@ -2047,5 +2210,35 @@ export default {
   font-size: 11px;
   color: #94a3b8;
   padding: 0 4px;
+}
+
+/* 숨김 안내 토스트 배너 */
+.hide-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10000;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: fadeInDown 0.3s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

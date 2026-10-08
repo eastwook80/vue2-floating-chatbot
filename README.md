@@ -50,11 +50,15 @@ npx serve -l 3000 .
     <!-- 메인 서비스 화면 -->
     <router-view />
 
-    <!-- 플로팅 챗봇 컴포넌트 -->
+    <!-- 플로팅 챗봇 컴포넌트 (모든 CSS와 로직이 내장되어 단독 사용 가능) -->
     <floating-chatbot 
       :initial-open="false"
       bot-name="루나 AI 챗봇"
       bot-avatar="🤖"
+      :enable-mock-reply="true"
+      @send-message="onSendMessage"
+      @file-upload="onFileUpload"
+      @session-change="onSessionChange"
       @hide="onChatHide"
     />
   </div>
@@ -69,10 +73,38 @@ export default {
     FloatingChatbot
   },
   methods: {
+    onSendMessage(payload) {
+      console.log('메시지 전송 이벤트:', payload.text, payload.session);
+    },
+    onFileUpload(payload) {
+      console.log('파일 업로드 이벤트:', payload.file.name, payload.session);
+    },
+    onSessionChange(session) {
+      console.log('세션 변경 이벤트:', session.title);
+    },
     onChatHide() {
-      console.log('챗봇 창이 숨겨졌습니다 (상태 보존).');
+      console.log('챗봇 창이 숨겨졌습니다 (상태 보존 및 토스트 안내).');
     }
   }
 };
 </script>
+
+### ⚙️ Component Props & Events
+
+| Prop 명 | 타입 | 기본값 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `initial-open` | Boolean | `false` | 컴포넌트 마운트 시 최초 열림 여부 |
+| `bot-name` | String | `'루나 AI 챗봇'` | 챗봇 이름 헤더 및 말풍선 발신자명 |
+| `bot-avatar` | String | `'🤖'` | 챗봇 아바타 아이콘 또는 이모지 |
+| `bot-status-text` | String | `'무엇이든 물어보세요 • 실시간 자동응답'` | 헤더 서브타이틀 상태 문구 |
+| `enable-mock-reply` | Boolean | `true` | 스마트 목업 자동 응답 생성기 활성화 여부 |
+| `primary-color` | String | `''` | 브랜드 메인 컬러 오버라이드 (예: `#2563eb`) |
+
+| Event 명 | 전달 인자 (Payload) | 설명 |
+| :--- | :--- | :--- |
+| `@send-message` | `{ text, session }` | 사용자가 메시지 전송 시 발생 (실제 API 연동에 활용) |
+| `@file-upload` | `{ file, session }` | 사용자가 파일 첨부 업로드 시 발생 |
+| `@session-change` | `session` | 세션 전환 또는 새 대화 생성 시 발생 |
+| `@hide` | - | 상단 숨기기(`-`) 버튼 클릭으로 창 숨김 시 발생 |
+
 ```
