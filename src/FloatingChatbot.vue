@@ -242,7 +242,7 @@
                   </svg>
                   자주 묻는 추천 질문
                 </div>
-                <div class="welcome-suggestions-grid">
+                <div class="welcome-suggestions-list">
                   <button 
                     v-for="(item, sIdx) in welcomeSuggestions" 
                     :key="sIdx"
@@ -301,7 +301,19 @@
                   <span class="msg-sender">{{ msg.sender === 'bot' ? botName : '나' }}</span>
                   
                   <div class="msg-bubble">
-                    {{ msg.text }}
+                    <div v-if="msg.fileAttachment" class="file-attachment-item">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                      <div class="file-attachment-info">
+                        <span class="file-attachment-name">{{ msg.fileAttachment.name }}</span>
+                        <span class="file-attachment-size">{{ msg.fileAttachment.size }}</span>
+                      </div>
+                    </div>
+                    <span v-else>{{ msg.text }}</span>
 
                     <!-- 템플릿 카드 -->
                     <div v-if="msg.templateCard" class="template-card">
@@ -358,6 +370,13 @@
           <footer class="chat-input-area">
             <div class="input-box-wrapper">
               <input 
+                type="file" 
+                ref="fileInput" 
+                class="file-input-hidden" 
+                @change="handleFileUpload" 
+                style="display: none;" 
+              />
+              <input 
                 type="text" 
                 ref="chatInput"
                 class="chat-input"
@@ -365,6 +384,17 @@
                 placeholder="메시지를 입력하세요... (Enter를 누르면 전송됩니다)"
                 @keydown.enter="handleEnterKey"
               />
+              <button 
+                class="upload-btn" 
+                @click="triggerFileUpload" 
+                title="파일 첨부" 
+                type="button"
+                :disabled="isTyping"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+              </button>
               <button 
                 class="send-btn" 
                 :disabled="!inputMessage.trim() || isTyping"
@@ -931,6 +961,63 @@ export default {
           self.scrollToBottom();
         });
       }, 800);
+    },
+    triggerFileUpload: function() {
+      if (this.$refs.fileInput) {
+        this.$refs.fileInput.click();
+      }
+    },
+    formatFileSize: function(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      var k = 1024;
+      var sizes = ['B', 'KB', 'MB', 'GB'];
+      var i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    },
+    handleFileUpload: function(event) {
+      var file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (this.currentSession.messages.length === 0) {
+        if (this.currentSession.title.indexOf('새로운 대화') === 0 || this.currentSession.title === '새로운 상담 시작') {
+          this.currentSession.title = file.name.length > 16 ? file.name.substring(0, 16) + '...' : file.name;
+        }
+      }
+
+      var sizeStr = this.formatFileSize(file.size);
+      var timeString = this.getCurrentTimeString();
+
+      this.currentSession.messages.push({
+        sender: 'user',
+        text: file.name,
+        time: timeString,
+        fileAttachment: {
+          name: file.name,
+          size: sizeStr
+        }
+      });
+      this.currentSession.updatedAt = timeString;
+      event.target.value = '';
+
+      var self = this;
+      this.$nextTick(function() {
+        self.scrollToBottom();
+      });
+
+      this.isTyping = true;
+      setTimeout(function() {
+        self.isTyping = false;
+        var botTime = self.getCurrentTimeString();
+        self.currentSession.messages.push({
+          sender: 'bot',
+          text: '첨부해 주신 파일 「' + file.name + '」(' + sizeStr + ')을(를) 확인했습니다. 요청하실 분석이나 처리 사항을 알려주시면 답변해 드리겠습니다.',
+          time: botTime
+        });
+        self.currentSession.updatedAt = botTime;
+        self.$nextTick(function() {
+          self.scrollToBottom();
+        });
+      }, 850);
     }
   }
 };
@@ -1493,8 +1580,8 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
-  max-width: 620px;
+  padding: 20px 16px;
+  max-width: 540px;
   margin: auto;
   text-align: center;
   animation: welcomeFadeIn 0.3s ease;
@@ -1507,7 +1594,7 @@ export default {
 }
 
 .welcome-header {
-  margin-bottom: 22px;
+  margin-bottom: 20px;
 }
 
 .welcome-avatar {
@@ -1533,7 +1620,7 @@ export default {
 
 .welcome-suggestions-section {
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .welcome-section-label {
@@ -1544,42 +1631,38 @@ export default {
   font-size: 12px;
   font-weight: 700;
   color: #4f46e5;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.welcome-suggestions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+.welcome-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
-}
-
-@media (max-width: 620px) {
-  .welcome-suggestions-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .welcome-suggestion-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 14px;
+  padding: 10px 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .welcome-suggestion-card:hover {
   background: #ffffff;
   border-color: #c7d2fe;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .suggestion-card-icon {
@@ -1596,7 +1679,7 @@ export default {
   font-size: 13px;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1875,6 +1958,32 @@ export default {
   padding: 8px 0;
 }
 
+.upload-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748b;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #4f46e5;
+}
+
+.upload-btn:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
 .send-btn {
   width: 38px;
   height: 38px;
@@ -1886,11 +1995,49 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: #4338ca;
 }
 
 .send-btn:disabled {
   background: #cbd5e1;
   cursor: not-allowed;
+}
+
+/* 파일 첨부 말풍선 아이템 */
+.file-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.file-attachment-item svg {
+  flex-shrink: 0;
+}
+
+.file-attachment-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+}
+
+.file-attachment-name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.3;
+  word-break: break-all;
+}
+
+.file-attachment-size {
+  font-size: 11px;
+  opacity: 0.85;
+  margin-top: 2px;
 }
 
 .input-sub-hint {
