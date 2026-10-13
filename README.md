@@ -14,6 +14,7 @@ Vue 2.5.17과 100% 호환되는 드래그 가능한 플로팅 챗봇 UI 컴포�
 8. **개발용 대화 템플릿**: 질문에 따른 스마트 목업 응답, 카드 액션 버튼, 추천 질문 칩 등이 구비되어 있어 실제 백엔드 API 연동 전 UI/UX 테스트를 즉시 진행할 수 있습니다.
 9. **초기 진입 화면 (세로 리스트 추천 질문 & 유의사항 안내)**: 새 대화 시작 또는 초기 진입 시 중앙에 서비스 안내, 아래로 내려오는 세로형 추천 질문 리스트 카드(클릭 시 즉시 질문 전송), 하단 유의사항/면책 안내 박스가 표시되어 처음 사용하는 사용자도 쉽게 질문을 시작할 수 있습니다.
 10. **첨부파일 목록 대기 및 동시 전송**: 메시지 전송 버튼 좌측에 파일 첨부 클립 버튼(`📎`)을 제공하며, 파일 선택 시 바로 전송되지 않고 입력창 상단 파일 목록 바(칩 형태)에 대기 상태로 보관됩니다. 목록에서 각 파일의 개별 삭제(`×`)가 가능하며, 메시지 작성 후 전송 시 텍스트와 파일이 함께 묶여 전송됩니다 (다중 파일 첨부 지원).
+11. **개별 대화 메시지 삭제 기능**: 대화창 내 각 말풍선에 호버(터치 기기 지원) 시 나타나는 삭제 버튼(휴지통 아이콘)을 클릭하여 원하는 메시지만 개별 삭제할 수 있으며, 삭제 확인 팝업을 거쳐 안전하게 제거되고 세션 미리보기 및 메시지 수가 자동 갱신됩니다.
 
 ---
 
@@ -59,6 +60,7 @@ npx serve -l 3000 .
       @send-message="onSendMessage"
       @file-upload="onFileUpload"
       @session-change="onSessionChange"
+      @message-deleted="onMessageDeleted"
       @hide="onChatHide"
     />
   </div>
@@ -81,6 +83,9 @@ export default {
     },
     onSessionChange(session) {
       console.log('세션 변경 이벤트:', session.title);
+    },
+    onMessageDeleted(payload) {
+      console.log('메시지 삭제 이벤트:', payload.message, payload.index);
     },
     onChatHide() {
       console.log('챗봇 창이 숨겨졌습니다 (상태 보존 및 토스트 안내).');
@@ -106,4 +111,5 @@ export default {
 | `@send-message` | `{ text, session, attachments }` | 사용자가 메시지 및 첨부파일 전송 시 발생 (실제 API 연동에 활용) |
 | `@file-upload` | `{ file, session }` | 사용자가 파일 첨부 업로드 시 발생 (개별 파일 이벤트) |
 | `@session-change` | `session` | 세션 전환 또는 새 대화 생성 시 발생 |
+| `@message-deleted` | `{ message, index, session }` | 특정 말풍선 메시지 삭제 시 발생 |
 | `@hide` | - | 상단 숨기기(`-`) 버튼 클릭으로 창 숨김 시 발생 |

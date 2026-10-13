@@ -288,7 +288,7 @@
 
               <div 
                 v-for="(msg, index) in currentSession.messages" 
-                :key="index"
+                :key="msg.id || index"
                 class="message-row"
                 :class="msg.sender"
               >
@@ -301,6 +301,20 @@
                   <span class="msg-sender">{{ msg.sender === 'bot' ? botName : '나' }}</span>
                   
                   <div class="msg-bubble">
+                    <!-- 메시지 개별 삭제 버튼 -->
+                    <button 
+                      type="button" 
+                      class="btn-delete-msg" 
+                      @click.stop="deleteMessage(index)" 
+                      title="메시지 삭제"
+                      aria-label="메시지 삭제"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
+
                     <!-- 첨부파일 목록 렌더링 (다중 또는 단일) -->
                     <div v-if="msg.attachments && msg.attachments.length > 0" class="msg-attachments-list">
                       <div 
@@ -974,6 +988,22 @@ export default {
         });
       }
     },
+    deleteMessage: function(index) {
+      if (!confirm('이 메시지를 삭제하시겠습니까?')) {
+        return;
+      }
+      var deletedMsg = this.currentSession.messages.splice(index, 1)[0];
+      if (this.currentSession.messages.length > 0) {
+        this.currentSession.updatedAt = this.currentSession.messages[this.currentSession.messages.length - 1].time;
+      } else {
+        this.currentSession.updatedAt = this.getCurrentTimeString();
+      }
+      this.$emit('message-deleted', {
+        message: deletedMsg,
+        index: index,
+        session: this.currentSession
+      });
+    },
     createNewSession: function() {
       var newId = Date.now();
       var newSession = {
@@ -993,8 +1023,16 @@ export default {
       });
     },
     getLastMessagePreview: function(session) {
-      if (!session.messages || session.messages.length === 0) return '추천 질문으로 대화를 시작해 보세요';
-      return session.messages[session.messages.length - 1].text;
+      if (!session.messages || session.messages.length === 0) return '대화 내용이 없습니다';
+      var lastMsg = session.messages[session.messages.length - 1];
+      if (lastMsg.text) return lastMsg.text;
+      if (lastMsg.attachments && lastMsg.attachments.length > 0) {
+        return '📎 파일: ' + lastMsg.attachments[0].name + (lastMsg.attachments.length > 1 ? ' 외 ' + (lastMsg.attachments.length - 1) + '개' : '');
+      }
+      if (lastMsg.fileAttachment) {
+        return '📎 파일: ' + lastMsg.fileAttachment.name;
+      }
+      return '메시지';
     },
     getCurrentTimeString: function() {
       var now = new Date();
@@ -2051,11 +2089,64 @@ export default {
 }
 
 .msg-bubble {
-  padding: 12px 16px;
+  position: relative;
+  padding: 12px 32px 12px 16px;
   border-radius: 16px;
   font-size: 14px;
   line-height: 1.55;
   word-break: break-word;
+  min-width: 58px;
+}
+
+/* 메시지 개별 삭제 버튼 */
+.btn-delete-msg {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.message-row:hover .btn-delete-msg {
+  opacity: 0.7;
+  pointer-events: auto;
+}
+
+.btn-delete-msg:hover {
+  opacity: 1 !important;
+  background: #fee2e2 !important;
+  color: #ef4444 !important;
+  transform: scale(1.08);
+}
+
+.user .btn-delete-msg {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.user .btn-delete-msg:hover {
+  background: #fee2e2 !important;
+  color: #ef4444 !important;
+}
+
+@media (hover: none) {
+  .btn-delete-msg {
+    opacity: 0.55;
+    pointer-events: auto;
+  }
 }
 
 .bot .msg-bubble {
