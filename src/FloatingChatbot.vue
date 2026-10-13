@@ -118,6 +118,18 @@
                 </svg>
                 새 대화
               </button>
+              <button 
+                class="btn-sidebar-clear" 
+                @click="clearAllSessions" 
+                :disabled="isHistoryEmpty"
+                title="대화 이력 전체 삭제"
+                aria-label="대화 이력 전체 삭제"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
               <button class="btn-sidebar-collapse" @click="toggleSidebar" title="채팅 이력 접기">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="15 18 9 12 15 6"></polyline>
@@ -196,6 +208,25 @@
               </template>
             </li>
           </ul>
+
+          <!-- 사이드바 하단 전체 삭제 푸터 -->
+          <div class="sidebar-footer">
+            <button 
+              type="button"
+              class="btn-clear-all-sessions" 
+              @click="clearAllSessions" 
+              :disabled="isHistoryEmpty"
+              title="대화 이력 전체 삭제"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+              <span>대화 이력 전체 삭제</span>
+            </button>
+          </div>
         </aside>
 
         <!-- 우측: 챗봇 대화 화면 -->
@@ -718,6 +749,13 @@ export default {
         }
       }
       return this.sessions[0];
+    },
+    isHistoryEmpty: function() {
+      if (!this.sessions || this.sessions.length === 0) return true;
+      if (this.sessions.length === 1 && (!this.sessions[0].messages || this.sessions[0].messages.length === 0)) {
+        return true;
+      }
+      return false;
     }
   },
   mounted: function() {
@@ -987,6 +1025,41 @@ export default {
           self.scrollToBottom();
         });
       }
+    },
+    clearAllSessions: function() {
+      if (this.isHistoryEmpty) {
+        alert('삭제할 대화 이력이 없습니다.');
+        return;
+      }
+
+      if (!confirm('모든 대화 이력을 삭제하시겠습니까?\n삭제된 모든 대화 내용은 복구할 수 없습니다.')) {
+        return;
+      }
+
+      var newId = Date.now();
+      var freshSession = {
+        id: newId,
+        title: '새로운 상담 시작',
+        category: '시작하기',
+        updatedAt: '방금',
+        messages: []
+      };
+
+      this.sessions = [freshSession];
+      this.currentSessionId = newId;
+      this.editingSessionId = null;
+      this.editingTitle = '';
+
+      this.$emit('sessions-cleared', {
+        newSession: freshSession
+      });
+      this.$emit('session-change', freshSession);
+
+      var self = this;
+      this.$nextTick(function() {
+        self.scrollToBottom();
+        if (self.$refs.chatInput) self.$refs.chatInput.focus();
+      });
     },
     deleteMessage: function(index) {
       if (!confirm('이 메시지를 삭제하시겠습니까?')) {
@@ -1598,6 +1671,31 @@ export default {
   border-color: #cbd5e1;
 }
 
+.btn-sidebar-clear {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sidebar-clear:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+.btn-sidebar-clear:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .btn-new-chat {
   background: #ffffff;
   color: #4f46e5;
@@ -1774,6 +1872,46 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 사이드바 하단 전체 삭제 푸터 */
+.sidebar-footer {
+  padding: 10px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  min-width: 270px;
+}
+
+.btn-clear-all-sessions {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-clear-all-sessions:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+.btn-clear-all-sessions:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-style: solid;
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #94a3b8;
 }
 
 .chat-main {
