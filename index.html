@@ -1172,6 +1172,92 @@
       border-top: 1px solid var(--border-subtle);
     }
 
+    /* 전송 대기 첨부파일 바 */
+    .staged-files-bar {
+      margin-bottom: 10px;
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      animation: fadeInDown 0.2s ease;
+    }
+
+    .staged-files-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .staged-files-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 90px;
+      overflow-y: auto;
+    }
+
+    .staged-file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 3px 6px 3px 10px;
+      font-size: 11.5px;
+      color: var(--text-main);
+      max-width: 260px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .staged-file-chip svg {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .staged-file-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+      font-weight: 500;
+    }
+
+    .staged-file-size {
+      font-size: 10.5px;
+      color: var(--text-subtle);
+      flex-shrink: 0;
+    }
+
+    .btn-remove-staged-file {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: none;
+      background: #f1f5f9;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .btn-remove-staged-file:hover {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+
     .input-box-wrapper {
       display: flex;
       align-items: center;
@@ -1253,6 +1339,28 @@
       background: #cbd5e1;
       cursor: not-allowed;
       opacity: 0.7;
+    }
+
+    /* 말풍선 내부 다중 첨부파일 목록 */
+    .msg-attachments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .msg-text-with-files {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .message-row.user .msg-text-with-files {
+      border-top-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .message-row.bot .msg-text-with-files {
+      border-top-color: var(--border-subtle);
     }
 
     /* 파일 첨부 말풍선 아이템 */
@@ -1734,9 +1842,28 @@
                   <span class="msg-sender">{{ msg.sender === 'bot' ? '루나 AI' : '나' }}</span>
                   
                   <div class="msg-bubble">
-                    <!-- 파일 첨부 메시지일 때 -->
-                    <div v-if="msg.fileAttachment" class="file-attachment-item">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- 첨부파일 목록 렌더링 (다중 또는 단일) -->
+                    <div v-if="msg.attachments && msg.attachments.length > 0" class="msg-attachments-list">
+                      <div 
+                        v-for="(att, aIdx) in msg.attachments" 
+                        :key="aIdx" 
+                        class="file-attachment-item"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                          <line x1="16" y1="13" x2="8" y2="13"></line>
+                          <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        <div class="file-attachment-info">
+                          <span class="file-attachment-name">{{ att.name }}</span>
+                          <span class="file-attachment-size">{{ att.sizeStr || att.size }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 단일 첨부파일 하위 호환 -->
+                    <div v-else-if="msg.fileAttachment" class="file-attachment-item">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -1744,10 +1871,14 @@
                       </svg>
                       <div class="file-attachment-info">
                         <span class="file-attachment-name">{{ msg.fileAttachment.name }}</span>
-                        <span class="file-attachment-size">{{ msg.fileAttachment.size }}</span>
+                        <span class="file-attachment-size">{{ msg.fileAttachment.sizeStr || msg.fileAttachment.size }}</span>
                       </div>
                     </div>
-                    <span v-else>{{ msg.text }}</span>
+
+                    <!-- 텍스트 메시지 본문 -->
+                    <div v-if="msg.text" :class="{ 'msg-text-with-files': (msg.attachments && msg.attachments.length > 0) || msg.fileAttachment }">
+                      {{ msg.text }}
+                    </div>
 
                     <!-- 템플릿 카드 (봇 메시지에 템플릿 데이터가 있을 때 렌더링) -->
                     <div v-if="msg.templateCard" class="template-card">
@@ -1802,12 +1933,50 @@
 
           <!-- 메시지 입력 영역 -->
           <footer class="chat-input-area">
+            <!-- 전송 대기 첨부파일 목록 바 -->
+            <div v-if="attachedFiles.length > 0" class="staged-files-bar">
+              <div class="staged-files-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+                <span>첨부파일 ({{ attachedFiles.length }})</span>
+              </div>
+              <div class="staged-files-list">
+                <div 
+                  v-for="(file, fIdx) in attachedFiles" 
+                  :key="file.id || fIdx"
+                  class="staged-file-chip"
+                  :title="file.name + ' (' + file.sizeStr + ')'"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  <span class="staged-file-name">{{ file.name }}</span>
+                  <span class="staged-file-size">{{ file.sizeStr }}</span>
+                  <button 
+                    type="button" 
+                    class="btn-remove-staged-file" 
+                    @click="removeAttachedFile(fIdx)" 
+                    title="파일 제거"
+                    aria-label="파일 제거"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div class="input-box-wrapper">
               <input 
                 type="file" 
                 ref="fileInput" 
                 id="fileUploadInput"
                 class="file-input-hidden" 
+                multiple
                 @change="handleFileUpload" 
                 style="display: none;" 
               />
@@ -1834,7 +2003,7 @@
               <button 
                 id="btnSendMessage"
                 class="send-btn" 
-                :disabled="!inputMessage.trim() || isTyping"
+                :disabled="(!inputMessage.trim() && attachedFiles.length === 0) || isTyping"
                 @click="sendMessage"
                 title="메시지 전송"
               >
@@ -1846,7 +2015,7 @@
             </div>
             <div class="input-sub-hint">
               <span>Shift+Enter 줄바꿈 • Enter 전송</span>
-              <span>숨김 시 작성 중인 내용이 보존됩니다</span>
+              <span>숨김 시 작성 중인 내용과 첨부파일이 보존됩니다</span>
             </div>
           </footer>
         </section>
@@ -1894,6 +2063,7 @@
           isTyping: false,
           inputMessage: '',
           unreadCount: 1,
+          attachedFiles: [],
           showHideToast: false,
           hideToastTimer: null,
           
@@ -2458,12 +2628,21 @@
         // 6. 개발용 챗봇 대화 템플릿 처리 및 자동 응답 시뮬레이션
         sendMessage: function() {
           var text = this.inputMessage.trim();
-          if (!text || this.isTyping) return;
+          var hasFiles = this.attachedFiles && this.attachedFiles.length > 0;
+          if ((!text && !hasFiles) || this.isTyping) return;
+
+          var filesToSend = this.attachedFiles.slice();
 
           // 첫 메시지 전송 시 기본 제목을 질문 앞부분으로 자동 변경
           if (this.currentSession.messages.length === 0) {
             if (this.currentSession.title.indexOf('새로운 대화') === 0 || this.currentSession.title === '새로운 상담 시작') {
-              this.currentSession.title = text.length > 16 ? text.substring(0, 16) + '...' : text;
+              if (text) {
+                this.currentSession.title = text.length > 16 ? text.substring(0, 16) + '...' : text;
+              } else if (hasFiles) {
+                var firstFileName = filesToSend[0].name;
+                var titleSuffix = filesToSend.length > 1 ? ' 외 ' + (filesToSend.length - 1) + '개' : '';
+                this.currentSession.title = firstFileName.length > 12 ? firstFileName.substring(0, 12) + '...' + titleSuffix : firstFileName + titleSuffix;
+              }
             }
           }
 
@@ -2473,11 +2652,14 @@
           this.currentSession.messages.push({
             sender: 'user',
             text: text,
+            attachments: filesToSend,
+            fileAttachment: filesToSend.length === 1 ? filesToSend[0] : null,
             time: timeString
           });
 
           this.currentSession.updatedAt = timeString;
           this.inputMessage = '';
+          this.attachedFiles = [];
 
           var self = this;
           this.$nextTick(function() {
@@ -2489,13 +2671,24 @@
 
           setTimeout(function() {
             self.isTyping = false;
-            var botResponse = self.generateMockReply(text);
-            
+            var botReplyText = '';
+            var templateCard = null;
+
+            if (filesToSend.length > 0 && text) {
+              botReplyText = '첨부해 주신 ' + filesToSend.length + '개 파일(「' + filesToSend.map(function(f) { return f.name; }).join('」, 「') + '」)과 함께 문의하신 내용을 확인했습니다. 분석 후 안내해 드리겠습니다.';
+            } else if (filesToSend.length > 0) {
+              botReplyText = '첨부해 주신 ' + filesToSend.length + '개 파일(「' + filesToSend.map(function(f) { return f.name; }).join('」, 「') + '」)을(를) 정상 수신했습니다. 추가로 궁금하신 사항이 있으신가요?';
+            } else {
+              var botResponse = self.generateMockReply(text);
+              botReplyText = botResponse.text;
+              templateCard = botResponse.templateCard || null;
+            }
+
             self.currentSession.messages.push({
               sender: 'bot',
-              text: botResponse.text,
+              text: botReplyText,
               time: self.getCurrentTimeString(),
-              templateCard: botResponse.templateCard || null
+              templateCard: templateCard
             });
 
             self.$nextTick(function() {
@@ -2570,49 +2763,29 @@
         },
 
         handleFileUpload: function(event) {
-          var file = event.target.files && event.target.files[0];
-          if (!file) return;
+          var files = event.target.files;
+          if (!files || files.length === 0) return;
 
-          if (this.currentSession.messages.length === 0) {
-            if (this.currentSession.title.indexOf('새로운 대화') === 0 || this.currentSession.title === '새로운 상담 시작') {
-              this.currentSession.title = file.name.length > 16 ? file.name.substring(0, 16) + '...' : file.name;
-            }
+          for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            var sizeStr = this.formatFileSize(file.size);
+            this.attachedFiles.push({
+              id: Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 5),
+              name: file.name,
+              size: file.size,
+              sizeStr: sizeStr,
+              type: file.type,
+              rawFile: file
+            });
           }
 
-          var sizeStr = this.formatFileSize(file.size);
-          var timeString = this.getCurrentTimeString();
-
-          this.currentSession.messages.push({
-            sender: 'user',
-            text: file.name,
-            time: timeString,
-            fileAttachment: {
-              name: file.name,
-              size: sizeStr
-            }
-          });
-          this.currentSession.updatedAt = timeString;
           event.target.value = '';
+          var inputEl = document.getElementById('chatInput');
+          if (inputEl) inputEl.focus();
+        },
 
-          var self = this;
-          this.$nextTick(function() {
-            self.scrollToBottom();
-          });
-
-          this.isTyping = true;
-          setTimeout(function() {
-            self.isTyping = false;
-            var botTime = self.getCurrentTimeString();
-            self.currentSession.messages.push({
-              sender: 'bot',
-              text: '첨부해 주신 파일 「' + file.name + '」(' + sizeStr + ')을(를) 확인했습니다. 요청하실 분석이나 처리 사항을 알려주시면 답변해 드리겠습니다.',
-              time: botTime
-            });
-            self.currentSession.updatedAt = botTime;
-            self.$nextTick(function() {
-              self.scrollToBottom();
-            });
-          }, 850);
+        removeAttachedFile: function(index) {
+          this.attachedFiles.splice(index, 1);
         }
       }
     });
