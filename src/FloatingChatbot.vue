@@ -231,6 +231,14 @@
 
         <!-- 우측: 챗봇 대화 화면 -->
         <section class="chat-main">
+          <!-- 복사 완료 알림 토스트 -->
+          <div v-if="showCopyToast" class="msg-copy-toast">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>클립보드에 복사되었습니다</span>
+          </div>
+
           <!-- 현재 선택된 세션 정보 바 -->
           <div class="session-info-bar">
             <div class="session-topic">
@@ -331,89 +339,150 @@
                 <div class="msg-content-wrap">
                   <span class="msg-sender">{{ msg.sender === 'bot' ? botName : '나' }}</span>
                   
-                  <div class="msg-bubble">
-                    <!-- 메시지 개별 삭제 버튼 -->
-                    <button 
-                      type="button" 
-                      class="btn-delete-msg" 
-                      @click.stop="deleteMessage(index)" 
-                      title="메시지 삭제"
-                      aria-label="메시지 삭제"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                      </svg>
-                    </button>
-
-                    <!-- 첨부파일 목록 렌더링 (다중 또는 단일) -->
-                    <div v-if="msg.attachments && msg.attachments.length > 0" class="msg-attachments-list">
-                      <div 
-                        v-for="(att, aIdx) in msg.attachments" 
-                        :key="aIdx" 
-                        class="file-attachment-item"
-                      >
-                        <img v-if="att.previewUrl" :src="att.previewUrl" class="msg-attachment-thumb" alt="첨부 이미지" />
-                        <svg v-else-if="att.isImage || (att.type && att.type.indexOf('image') !== -1)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                          <polyline points="21 15 16 10 5 21"></polyline>
-                        </svg>
-                        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                          <polyline points="14 2 14 8 20 8"></polyline>
-                          <line x1="16" y1="13" x2="8" y2="13"></line>
-                          <line x1="16" y1="17" x2="8" y2="17"></line>
-                        </svg>
-                        <div class="file-attachment-info">
-                          <span class="file-attachment-name">{{ att.name }}</span>
-                          <span class="file-attachment-size">{{ att.sizeStr || att.size }}</span>
+                  <div class="msg-bubble-wrap">
+                    <div class="msg-bubble" :class="{ 'is-editing': editingMsgIndex === index }">
+                      <!-- 편집 모드 (사용자 메시지 수정) -->
+                      <div v-if="editingMsgIndex === index" class="msg-edit-mode-wrap">
+                        <textarea 
+                          ref="editMsgInput" 
+                          v-model="editingMsgText" 
+                          class="msg-edit-textarea" 
+                          rows="2"
+                          placeholder="메시지를 수정하세요..."
+                          @keydown.enter.exact.prevent="saveEditMessage(index)"
+                          @keydown.esc.prevent="cancelEditMessage"
+                        ></textarea>
+                        <div class="msg-edit-btn-group">
+                          <button type="button" class="btn-edit-cancel" @click.stop="cancelEditMessage">취소</button>
+                          <button type="button" class="btn-edit-save" @click.stop="saveEditMessage(index)">저장</button>
                         </div>
+                        <div class="msg-edit-hint">Enter 저장 • Esc 취소 • Shift+Enter 줄바꿈</div>
                       </div>
-                    </div>
-                    <!-- 단일 첨부파일 하위 호환 -->
-                    <div v-else-if="msg.fileAttachment" class="file-attachment-item">
-                      <img v-if="msg.fileAttachment.previewUrl" :src="msg.fileAttachment.previewUrl" class="msg-attachment-thumb" alt="첨부 이미지" />
-                      <svg v-else-if="msg.fileAttachment.isImage || (msg.fileAttachment.type && msg.fileAttachment.type.indexOf('image') !== -1)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                      </svg>
-                      <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                      </svg>
-                      <div class="file-attachment-info">
-                        <span class="file-attachment-name">{{ msg.fileAttachment.name }}</span>
-                        <span class="file-attachment-size">{{ msg.fileAttachment.sizeStr || msg.fileAttachment.size }}</span>
-                      </div>
+
+                      <!-- 일반 메시지 표시 모드 -->
+                      <template v-else>
+                        <!-- 첨부파일 목록 렌더링 (다중 또는 단일) -->
+                        <div v-if="msg.attachments && msg.attachments.length > 0" class="msg-attachments-list">
+                          <div 
+                            v-for="(att, aIdx) in msg.attachments" 
+                            :key="aIdx" 
+                            class="file-attachment-item"
+                          >
+                            <img v-if="att.previewUrl" :src="att.previewUrl" class="msg-attachment-thumb" alt="첨부 이미지" />
+                            <svg v-else-if="att.isImage || (att.type && att.type.indexOf('image') !== -1)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                              <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                              <line x1="16" y1="13" x2="8" y2="13"></line>
+                              <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            <div class="file-attachment-info">
+                              <span class="file-attachment-name">{{ att.name }}</span>
+                              <span class="file-attachment-size">{{ att.sizeStr || att.size }}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- 단일 첨부파일 하위 호환 -->
+                        <div v-else-if="msg.fileAttachment" class="file-attachment-item">
+                          <img v-if="msg.fileAttachment.previewUrl" :src="msg.fileAttachment.previewUrl" class="msg-attachment-thumb" alt="첨부 이미지" />
+                          <svg v-else-if="msg.fileAttachment.isImage || (msg.fileAttachment.type && msg.fileAttachment.type.indexOf('image') !== -1)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                          </svg>
+                          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                          </svg>
+                          <div class="file-attachment-info">
+                            <span class="file-attachment-name">{{ msg.fileAttachment.name }}</span>
+                            <span class="file-attachment-size">{{ msg.fileAttachment.sizeStr || msg.fileAttachment.size }}</span>
+                          </div>
+                        </div>
+
+                        <!-- 텍스트 메시지 본문 -->
+                        <div v-if="msg.text" :class="{ 'msg-text-with-files': (msg.attachments && msg.attachments.length > 0) || msg.fileAttachment }">
+                          {{ msg.text }}
+                        </div>
+
+                        <!-- 템플릿 카드 -->
+                        <div v-if="msg.templateCard" class="template-card">
+                          <div class="template-card-title">{{ msg.templateCard.title }}</div>
+                          <div class="template-card-desc">{{ msg.templateCard.description }}</div>
+                          <div class="template-actions">
+                            <button 
+                              v-for="(btn, bIdx) in msg.templateCard.actions" 
+                              :key="bIdx" 
+                              class="template-action-btn"
+                              @click="handleTemplateAction(btn)"
+                            >
+                              {{ btn.label }}
+                            </button>
+                          </div>
+                        </div>
+                      </template>
                     </div>
 
-                    <!-- 텍스트 메시지 본문 -->
-                    <div v-if="msg.text" :class="{ 'msg-text-with-files': (msg.attachments && msg.attachments.length > 0) || msg.fileAttachment }">
-                      {{ msg.text }}
-                    </div>
+                    <!-- 메시지 액션 툴바: 복사, 수정(사용자 메시지만), 삭제 순서 -->
+                    <div v-if="editingMsgIndex !== index" class="msg-actions-toolbar">
+                      <!-- 1. 복사 버튼 (봇/사용자 모두) -->
+                      <button 
+                        type="button" 
+                        class="msg-action-btn" 
+                        @click.stop="copyMessage(msg, index)" 
+                        title="메시지 복사"
+                        aria-label="메시지 복사"
+                      >
+                        <svg v-if="copiedMsgIndex !== index" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </button>
 
-                    <!-- 템플릿 카드 -->
-                    <div v-if="msg.templateCard" class="template-card">
-                      <div class="template-card-title">{{ msg.templateCard.title }}</div>
-                      <div class="template-card-desc">{{ msg.templateCard.description }}</div>
-                      <div class="template-actions">
-                        <button 
-                          v-for="(btn, bIdx) in msg.templateCard.actions" 
-                          :key="bIdx" 
-                          class="template-action-btn"
-                          @click="handleTemplateAction(btn)"
-                        >
-                          {{ btn.label }}
-                        </button>
-                      </div>
+                      <!-- 2. 수정 버튼 (사용자 메시지에서만 표시) -->
+                      <button 
+                        v-if="msg.sender === 'user'" 
+                        type="button" 
+                        class="msg-action-btn btn-edit" 
+                        @click.stop="startEditMessage(index)" 
+                        title="메시지 수정"
+                        aria-label="메시지 수정"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M12 20h9"></path>
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                      </button>
+
+                      <!-- 3. 삭제 버튼 (봇/사용자 모두) -->
+                      <button 
+                        type="button" 
+                        class="msg-action-btn btn-delete" 
+                        @click.stop="deleteMessage(index)" 
+                        title="메시지 삭제"
+                        aria-label="메시지 삭제"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
                     </div>
                   </div>
 
-                  <span class="msg-time">{{ msg.time }}</span>
+                  <span class="msg-time">
+                    {{ msg.time }}
+                    <span v-if="msg.isEdited" class="msg-edited-tag" title="수정된 메시지">(수정됨)</span>
+                  </span>
                 </div>
               </div>
 
@@ -612,6 +681,10 @@ export default {
       inputMessage: '',
       unreadCount: 1,
       attachedFiles: [],
+      copiedMsgIndex: null,
+      showCopyToast: false,
+      editingMsgIndex: null,
+      editingMsgText: '',
       showHideToast: false,
       hideToastTimer: null,
       windowPosition: {
@@ -972,6 +1045,9 @@ export default {
       if (this.editingSessionId) {
         this.cancelEditSessionTitle();
       }
+      if (this.editingMsgIndex !== null) {
+        this.cancelEditMessage();
+      }
       this.currentSessionId = sessionId;
       this.$emit('session-change', this.currentSession);
       var self = this;
@@ -1080,7 +1156,121 @@ export default {
         if (self.$refs.chatInput) self.$refs.chatInput.focus();
       });
     },
+    copyMessage: function(msg, index) {
+      var textToCopy = msg.text || '';
+      if (!textToCopy && msg.attachments && msg.attachments.length > 0) {
+        textToCopy = msg.attachments.map(function(a) { return a.name; }).join(', ');
+      } else if (!textToCopy && msg.fileAttachment) {
+        textToCopy = msg.fileAttachment.name;
+      }
+      if (!textToCopy) return;
+
+      var self = this;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(function() {
+          self.handleCopySuccess(index);
+        }).catch(function() {
+          self.fallbackCopyText(textToCopy, index);
+        });
+      } else {
+        this.fallbackCopyText(textToCopy, index);
+      }
+    },
+    fallbackCopyText: function(text, index) {
+      try {
+        var textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        var successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful) {
+          this.handleCopySuccess(index);
+        }
+      } catch (err) {
+        console.error('클립보드 복사 실패:', err);
+      }
+    },
+    handleCopySuccess: function(index) {
+      var self = this;
+      this.copiedMsgIndex = index;
+      this.showCopyToast = true;
+      if (this._copyToastTimer) {
+        clearTimeout(this._copyToastTimer);
+      }
+      this._copyToastTimer = setTimeout(function() {
+        self.copiedMsgIndex = null;
+        self.showCopyToast = false;
+      }, 1800);
+    },
+    startEditMessage: function(index) {
+      var msg = this.currentSession.messages[index];
+      if (!msg || msg.sender !== 'user') return;
+      this.editingMsgIndex = index;
+      this.editingMsgText = msg.text || '';
+      var self = this;
+      this.$nextTick(function() {
+        if (self.$refs.editMsgInput) {
+          var inputEl = Array.isArray(self.$refs.editMsgInput) ? self.$refs.editMsgInput[0] : self.$refs.editMsgInput;
+          if (inputEl) {
+            inputEl.focus();
+            var val = inputEl.value;
+            inputEl.setSelectionRange(val.length, val.length);
+          }
+        }
+      });
+    },
+    cancelEditMessage: function() {
+      this.editingMsgIndex = null;
+      this.editingMsgText = '';
+    },
+    saveEditMessage: function(index) {
+      var newText = this.editingMsgText.trim();
+      var msg = this.currentSession.messages[index];
+      if (!msg) return;
+
+      var hasAttachments = (msg.attachments && msg.attachments.length > 0) || msg.fileAttachment;
+      if (!newText && !hasAttachments) {
+        this.cancelEditMessage();
+        this.deleteMessage(index);
+        return;
+      }
+
+      if (newText !== msg.text) {
+        this.$set(msg, 'text', newText);
+        this.$set(msg, 'isEdited', true);
+        this.$set(msg, 'editedAt', this.getCurrentTimeString());
+        this.currentSession.updatedAt = this.getCurrentTimeString();
+
+        // 첫 번째 사용자 메시지 수정 시 세션 기본 제목도 갱신
+        var firstUserMsgIndex = -1;
+        for (var i = 0; i < this.currentSession.messages.length; i++) {
+          if (this.currentSession.messages[i].sender === 'user') {
+            firstUserMsgIndex = i;
+            break;
+          }
+        }
+        if (index === firstUserMsgIndex && (this.currentSession.title.indexOf('새로운 대화') === 0 || this.currentSession.title === '새로운 상담 시작')) {
+          this.currentSession.title = newText.length > 16 ? newText.substring(0, 16) + '...' : newText;
+        }
+
+        this.$emit('message-edited', {
+          message: msg,
+          index: index,
+          session: this.currentSession
+        });
+      }
+
+      this.cancelEditMessage();
+    },
     deleteMessage: function(index) {
+      if (this.editingMsgIndex === index) {
+        this.cancelEditMessage();
+      }
       if (!confirm('이 메시지를 삭제하시겠습니까?')) {
         return;
       }
@@ -2359,64 +2549,222 @@ export default {
   color: #64748b;
 }
 
+.msg-bubble-wrap {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+}
+
 .msg-bubble {
   position: relative;
-  padding: 12px 32px 12px 16px;
+  padding: 11px 16px;
   border-radius: 16px;
   font-size: 14px;
   line-height: 1.55;
   word-break: break-word;
-  min-width: 58px;
+  min-width: 54px;
 }
 
-/* 메시지 개별 삭제 버튼 */
-.btn-delete-msg {
+/* 메시지 액션 툴바 (복사, 수정, 삭제 순) */
+.msg-actions-toolbar {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
+  bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 2px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+/* 사용자 메시지: 말풍선 좌측 바깥에 위치 */
+.user .msg-actions-toolbar {
+  right: calc(100% + 6px);
+  transform: translateX(4px);
+}
+
+.user .message-row:hover .msg-actions-toolbar {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+/* 봇 메시지: 말풍선 우측 바깥에 위치 */
+.bot .msg-actions-toolbar {
+  left: calc(100% + 6px);
+  transform: translateX(-4px);
+}
+
+.bot .message-row:hover .msg-actions-toolbar {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.msg-action-btn {
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
   border: none;
-  background: rgba(0, 0, 0, 0.05);
+  background: transparent;
   color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding: 0;
-  opacity: 0;
-  pointer-events: none;
   transition: all 0.15s ease;
-  z-index: 2;
 }
 
-.message-row:hover .btn-delete-msg {
-  opacity: 0.7;
-  pointer-events: auto;
-}
-
-.btn-delete-msg:hover {
-  opacity: 1 !important;
-  background: #fee2e2 !important;
-  color: #ef4444 !important;
+.msg-action-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
   transform: scale(1.08);
 }
 
-.user .btn-delete-msg {
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+.msg-action-btn.btn-edit:hover {
+  background: #eef2ff !important;
+  color: #4f46e5 !important;
 }
 
-.user .btn-delete-msg:hover {
+.msg-action-btn.btn-delete:hover {
   background: #fee2e2 !important;
   color: #ef4444 !important;
 }
 
 @media (hover: none) {
-  .btn-delete-msg {
-    opacity: 0.55;
+  .msg-actions-toolbar {
+    opacity: 0.85;
     pointer-events: auto;
+    transform: none;
+  }
+}
+
+/* 메시지 인라인 수정 모드 */
+.msg-bubble.is-editing {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 1.5px solid #4f46e5;
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.15);
+  min-width: 240px;
+  max-width: 100%;
+  padding: 10px 12px;
+}
+
+.msg-edit-mode-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.msg-edit-textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #1e293b;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 48px;
+  max-height: 140px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.msg-edit-textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
+}
+
+.msg-edit-btn-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.btn-edit-cancel,
+.btn-edit-save {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.btn-edit-cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.btn-edit-cancel:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.btn-edit-save {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.btn-edit-save:hover {
+  background: #4338ca;
+}
+
+.msg-edit-hint {
+  font-size: 10.5px;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.msg-edited-tag {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-left: 3px;
+  font-weight: 500;
+}
+
+/* 복사 알림 토스트 */
+.msg-copy-toast {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(4px);
+  color: #f8fafc;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 1000;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  animation: copyToastPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes copyToastPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
   }
 }
 
