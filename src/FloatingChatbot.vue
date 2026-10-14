@@ -428,6 +428,14 @@
                         </div>
                       </template>
                     </div>
+                  </div>
+
+                  <!-- 메시지 하단 메타 영역: 시간 및 액션 버튼(복사, 수정, 삭제) -->
+                  <div class="msg-footer">
+                    <span class="msg-time">
+                      {{ msg.time }}
+                      <span v-if="msg.isEdited" class="msg-edited-tag" title="수정된 메시지">(수정됨)</span>
+                    </span>
 
                     <!-- 메시지 액션 툴바: 복사, 수정(사용자 메시지만), 삭제 순서 -->
                     <div v-if="editingMsgIndex !== index" class="msg-actions-toolbar">
@@ -478,11 +486,6 @@
                       </button>
                     </div>
                   </div>
-
-                  <span class="msg-time">
-                    {{ msg.time }}
-                    <span v-if="msg.isEdited" class="msg-edited-tag" title="수정된 메시지">(수정됨)</span>
-                  </span>
                 </div>
               </div>
 
@@ -2565,47 +2568,38 @@ export default {
   min-width: 54px;
 }
 
+/* 메시지 하단 메타 영역 (시간 & 액션 툴바) */
+.msg-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  padding: 0 2px;
+}
+
+.message-row.user .msg-footer {
+  flex-direction: row-reverse;
+}
+
 /* 메시지 액션 툴바 (복사, 수정, 삭제 순) */
 .msg-actions-toolbar {
-  position: absolute;
-  bottom: 2px;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  background: #ffffff;
+  gap: 3px;
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 2px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.16s ease, transform 0.16s ease;
-  z-index: 10;
+  padding: 2px 4px;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
 }
 
-/* 사용자 메시지: 말풍선 좌측 바깥에 위치 */
-.user .msg-actions-toolbar {
-  right: calc(100% + 6px);
-  transform: translateX(4px);
-}
-
-.user .message-row:hover .msg-actions-toolbar {
+.message-row:hover .msg-actions-toolbar,
+.msg-actions-toolbar:hover {
   opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-/* 봇 메시지: 말풍선 우측 바깥에 위치 */
-.bot .msg-actions-toolbar {
-  left: calc(100% + 6px);
-  transform: translateX(-4px);
-}
-
-.bot .message-row:hover .msg-actions-toolbar {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .msg-action-btn {
