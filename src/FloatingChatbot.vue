@@ -353,7 +353,13 @@
                         :key="aIdx" 
                         class="file-attachment-item"
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <img v-if="att.previewUrl" :src="att.previewUrl" class="msg-attachment-thumb" alt="첨부 이미지" />
+                        <svg v-else-if="att.isImage || (att.type && att.type.indexOf('image') !== -1)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                          <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                           <polyline points="14 2 14 8 20 8"></polyline>
                           <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -367,7 +373,13 @@
                     </div>
                     <!-- 단일 첨부파일 하위 호환 -->
                     <div v-else-if="msg.fileAttachment" class="file-attachment-item">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <img v-if="msg.fileAttachment.previewUrl" :src="msg.fileAttachment.previewUrl" class="msg-attachment-thumb" alt="첨부 이미지" />
+                      <svg v-else-if="msg.fileAttachment.isImage || (msg.fileAttachment.type && msg.fileAttachment.type.indexOf('image') !== -1)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                      </svg>
+                      <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -436,7 +448,7 @@
           </div>
 
           <!-- 입력창 -->
-          <footer class="chat-input-area">
+          <footer class="chat-input-area" @paste="handlePaste">
             <!-- 전송 대기 첨부파일 목록 바 -->
             <div v-if="attachedFiles.length > 0" class="staged-files-bar">
               <div class="staged-files-label">
@@ -452,7 +464,13 @@
                   class="staged-file-chip"
                   :title="file.name + ' (' + file.sizeStr + ')'"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <img v-if="file.previewUrl" :src="file.previewUrl" class="staged-file-thumb" alt="이미지 미리보기" />
+                  <svg v-else-if="file.isImage || (file.type && file.type.indexOf('image') !== -1)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                     <polyline points="14 2 14 8 20 8"></polyline>
                   </svg>
@@ -490,6 +508,7 @@
                 v-model="inputMessage" 
                 placeholder="메시지를 입력하세요... (Enter를 누르면 전송됩니다)"
                 @keydown.enter="handleEnterKey"
+                @paste="handlePaste"
               />
               <button 
                 class="upload-btn" 
@@ -1277,25 +1296,96 @@ export default {
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
         var sizeStr = this.formatFileSize(file.size);
+        var isImage = file.type ? file.type.indexOf('image') !== -1 : false;
+        var previewUrl = (isImage && window.URL && typeof window.URL.createObjectURL === 'function')
+          ? window.URL.createObjectURL(file)
+          : null;
+
         this.attachedFiles.push({
           id: Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 5),
           name: file.name,
           size: file.size,
           sizeStr: sizeStr,
           type: file.type,
+          isImage: isImage,
+          previewUrl: previewUrl,
           rawFile: file
         });
       }
 
       this.$emit('files-staged', {
         files: this.attachedFiles,
-        session: this.currentSession
+        session: this.currentSession,
+        source: 'upload'
       });
 
       event.target.value = '';
       if (this.$refs.chatInput) {
         this.$refs.chatInput.focus();
       }
+    },
+    handlePaste: function(event) {
+      var clipboardData = event.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+
+      var items = clipboardData.items;
+      if (!items || items.length === 0) return;
+
+      var imageFiles = [];
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (item.type && item.type.indexOf('image') !== -1) {
+          var file = item.getAsFile();
+          if (file) {
+            imageFiles.push(file);
+          }
+        }
+      }
+
+      if (imageFiles.length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+
+      for (var j = 0; j < imageFiles.length; j++) {
+        var imgFile = imageFiles[j];
+        var fileName = imgFile.name;
+        if (!fileName || fileName === 'image.png' || fileName === 'blob') {
+          var ext = (imgFile.type && imgFile.type.split('/')[1]) || 'png';
+          if (ext === 'jpeg') ext = 'jpg';
+          var now = new Date();
+          var timeTag = now.getFullYear() +
+            ('0' + (now.getMonth() + 1)).slice(-2) +
+            ('0' + now.getDate()).slice(-2) + '_' +
+            ('0' + now.getHours()).slice(-2) +
+            ('0' + now.getMinutes()).slice(-2) +
+            ('0' + now.getSeconds()).slice(-2);
+          fileName = 'clipboard_image_' + timeTag + (imageFiles.length > 1 ? '_' + (j + 1) : '') + '.' + ext;
+        }
+
+        var sizeStr = this.formatFileSize(imgFile.size);
+        var previewUrl = (window.URL && typeof window.URL.createObjectURL === 'function') 
+          ? window.URL.createObjectURL(imgFile) 
+          : null;
+
+        this.attachedFiles.push({
+          id: Date.now() + '_' + j + '_' + Math.random().toString(36).substr(2, 5),
+          name: fileName,
+          size: imgFile.size,
+          sizeStr: sizeStr,
+          type: imgFile.type || 'image/png',
+          isImage: true,
+          previewUrl: previewUrl,
+          rawFile: imgFile
+        });
+      }
+
+      this.$emit('files-staged', {
+        files: this.attachedFiles,
+        session: this.currentSession,
+        source: 'clipboard'
+      });
     },
     removeAttachedFile: function(index) {
       this.attachedFiles.splice(index, 1);
@@ -2481,6 +2571,15 @@ export default {
   flex-shrink: 0;
 }
 
+.staged-file-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 .staged-file-name {
   white-space: nowrap;
   overflow: hidden;
@@ -2617,6 +2716,15 @@ export default {
 
 .file-attachment-item svg {
   flex-shrink: 0;
+}
+
+.msg-attachment-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .file-attachment-info {
