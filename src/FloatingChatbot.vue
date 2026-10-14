@@ -1462,7 +1462,7 @@ export default {
 .resize-handle-r {
   top: 0;
   right: 0;
-  width: 7px;
+  width: 6px;
   height: 100%;
   cursor: ew-resize;
 }
@@ -1471,7 +1471,7 @@ export default {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 7px;
+  height: 6px;
   cursor: ns-resize;
 }
 
@@ -1977,10 +1977,39 @@ export default {
 .message-container {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 14px 20px 20px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  margin-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.chatbot-window.is-maximized .message-container {
+  margin-right: 0;
+  padding-right: 20px;
+}
+
+.message-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.message-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.message-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.message-container::-webkit-scrollbar-thumb:active {
+  background: #475569;
 }
 
 /* 중앙 웰컴 화면 (처음 진입 시) */
