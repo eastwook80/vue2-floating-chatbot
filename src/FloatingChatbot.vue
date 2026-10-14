@@ -448,7 +448,7 @@
           </div>
 
           <!-- 입력창 -->
-          <footer class="chat-input-area" @paste="handlePaste">
+          <footer class="chat-input-area">
             <!-- 전송 대기 첨부파일 목록 바 -->
             <div v-if="attachedFiles.length > 0" class="staged-files-bar">
               <div class="staged-files-label">
@@ -1332,12 +1332,17 @@ export default {
       if (!items || items.length === 0) return;
 
       var imageFiles = [];
+      var seenSignatures = {};
       for (var i = 0; i < items.length; i++) {
         var item = items[i];
         if (item.type && item.type.indexOf('image') !== -1) {
           var file = item.getAsFile();
           if (file) {
-            imageFiles.push(file);
+            var signature = file.size + '_' + file.type + '_' + (file.name || '');
+            if (!seenSignatures[signature]) {
+              seenSignatures[signature] = true;
+              imageFiles.push(file);
+            }
           }
         }
       }
@@ -1347,6 +1352,16 @@ export default {
       }
 
       event.preventDefault();
+      if (typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+      }
+
+      var now = new Date();
+      var nowTime = now.getTime();
+      if (this._lastPasteTime && (nowTime - this._lastPasteTime) < 300) {
+        return;
+      }
+      this._lastPasteTime = nowTime;
 
       for (var j = 0; j < imageFiles.length; j++) {
         var imgFile = imageFiles[j];
@@ -1354,7 +1369,6 @@ export default {
         if (!fileName || fileName === 'image.png' || fileName === 'blob') {
           var ext = (imgFile.type && imgFile.type.split('/')[1]) || 'png';
           if (ext === 'jpeg') ext = 'jpg';
-          var now = new Date();
           var timeTag = now.getFullYear() +
             ('0' + (now.getMonth() + 1)).slice(-2) +
             ('0' + now.getDate()).slice(-2) + '_' +

@@ -22,9 +22,9 @@ Vue 2.5.17과 100% 호환되는 드래그 가능한 플로팅 챗봇 UI 컴포�
 
 ## 📂 파일 구성
 
-- **`index.html`**: Vue 2.5.17 CDN 기반의 즉시 실행 가능한 완성형 단일 데모 파일 (브라우저에서 바로 열람 가능)
-- **`src/FloatingChatbot.vue`**: Vue CLI / Webpack 등 기존 Vue 2.5.17 프로젝트에 바로 복사하여 사용할 수 있는 Single File Component (SFC)
-- **`package.json`**: 로컬 테스트 개발 서버 구동 스크립트
+- **`index.html`**: `src/FloatingChatbot.vue` 단독 파일을 직접 마운트하여 브라우저에서 테스트할 수 있는 경량 데모 호스트 파일 (`http-vue-loader` 기반)
+- **`src/FloatingChatbot.vue`**: 모든 템플릿, CSS(애니메이션 포함), 스크립트 로직이 완벽히 내장/캡슐화되어 단독으로 동작하는 Single File Component (SFC)
+- **`package.json`**: 로컬 테스트 개발 서버 구동 스크립트 및 의존성 설정
 
 ---
 
