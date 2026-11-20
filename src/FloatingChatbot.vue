@@ -1715,7 +1715,6 @@ export default {
   flex-direction: column;
   z-index: 9999;
   overflow: hidden;
-  user-select: none;
   animation: chatWindowPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   transition: border-radius 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1754,6 +1753,8 @@ export default {
 .resize-handle {
   position: absolute;
   z-index: 100;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .resize-handle-r {
@@ -1801,6 +1802,8 @@ export default {
   padding: 0 18px;
   cursor: grab;
   flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .chat-header:active {
@@ -1902,6 +1905,7 @@ export default {
   overflow: hidden;
   background: #ffffff;
   user-select: text;
+  -webkit-user-select: text;
 }
 
 .chat-sidebar {
@@ -2281,6 +2285,8 @@ export default {
   margin-right: 6px;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .chatbot-window.is-maximized .message-container {
@@ -2566,6 +2572,9 @@ export default {
   line-height: 1.55;
   word-break: break-word;
   min-width: 54px;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 
 /* 메시지 하단 메타 영역 (시간 & 액션 툴바) */
